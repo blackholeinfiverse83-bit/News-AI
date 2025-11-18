@@ -223,18 +223,81 @@ The application uses a centralized API service located in `/services/api.js` tha
 ```http
 GET /health
 ```
+**Purpose**: Check backend server status and service availability
+
 **Response:**
 ```json
 {
   "status": "healthy",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "services": {
+    "scraping": true,
+    "summarizing": true,
+    "vetting": true,
+    "video_search": {
+      "youtube": true,
+      "twitter": false
+    }
+  },
   "version": "4.0.0"
 }
 ```
 
-#### 2. **Get News Items**
+---
+
+#### 2. **Unified News Workflow** (Primary Endpoint)
 ```http
-GET /api/news?category=technology&limit=20
+POST /api/unified-news-workflow
+Content-Type: application/json
+
+{
+  "url": "https://www.bbc.com/news/article-123"
+}
 ```
+**Purpose**: Complete news analysis pipeline (scraping → vetting → summarization → video search)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "url": "https://www.bbc.com/news/article-123",
+    "timestamp": "2024-01-01T00:00:00Z",
+    "workflow_steps": ["scraping", "vetting", "summarization", "prompt_generation", "video_search"],
+    "processing_time": {
+      "scraping": 2.5,
+      "vetting": 3.2,
+      "summarization": 4.1,
+      "prompt_generation": 1.8,
+      "video_search": 2.3
+    },
+    "scraped_data": { ... },
+    "vetting_results": { ... },
+    "summary": { ... },
+    "video_prompt": { ... },
+    "sidebar_videos": { ... },
+    "total_processing_time": 13.9,
+    "workflow_complete": true,
+    "steps_completed": 5
+  },
+  "message": "Workflow completed successfully",
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+---
+
+#### 3. **Get News Items**
+```http
+GET /api/news?category=technology&limit=20&status=completed
+```
+**Purpose**: Retrieve list of processed news items with optional filtering
+
+**Query Parameters:**
+- `category` (optional): Filter by category (technology, business, science, etc.)
+- `limit` (optional): Maximum number of items to return
+- `status` (optional): Filter by status (completed, processing, pending, flagged)
+
 **Response:**
 ```json
 {
@@ -242,56 +305,89 @@ GET /api/news?category=technology&limit=20
   "data": [
     {
       "id": "1",
-      "title": "Article Title",
-      "source": "Source Name",
+      "title": "AI Breakthrough in Natural Language Processing",
+      "source": "TechCrunch",
       "category": "technology",
-      "url": "https://...",
+      "url": "https://techcrunch.com/ai-breakthrough",
       "status": "completed",
       "timestamp": "2024-01-01T00:00:00Z",
-      "summary": "Article summary...",
-      "audioUrl": "/audio/sample.mp3",
+      "summary": "Major AI advancement enables more accurate language understanding.",
+      "audioUrl": "/audio/sample1.mp3",
       "audioDuration": 180,
       "insights": { ... },
       "pipeline": { ... },
       "feedback": { ... }
     }
   ],
-  "total": 5
+  "total": 5,
+  "timestamp": "2024-01-01T00:00:00Z"
 }
 ```
 
-#### 3. **Get Processed News**
+---
+
+#### 4. **Get Processed News by ID**
 ```http
 GET /api/processed/:id
 ```
+**Purpose**: Get detailed information about a specific processed news item
+
 **Response:**
 ```json
 {
   "success": true,
   "data": {
     "id": "1",
-    "title": "...",
-    "content": "...",
-    "summary": "...",
-    "insights": { ... },
-    "pipeline": { ... }
+    "title": "AI Breakthrough in Natural Language Processing",
+    "content": "Full article content...",
+    "summary": {
+      "text": "Major AI advancement...",
+      "original_length": 5000,
+      "summary_length": 200,
+      "compression_ratio": 0.04
+    },
+    "insights": {
+      "sentiment": "positive",
+      "tone": "informative",
+      "category": "technology",
+      "credibilityScore": 0.92,
+      "biasScore": 0.15,
+      "keywords": ["AI", "NLP", "breakthrough"],
+      "entities": ["OpenAI", "GPT", "Stanford University"]
+    },
+    "pipeline": {
+      "fetched": { "status": "completed", "timestamp": "2024-01-01T00:00:00Z" },
+      "filtered": { "status": "completed", "timestamp": "2024-01-01T00:00:01Z" },
+      "summarized": { "status": "completed", "timestamp": "2024-01-01T00:00:02Z" },
+      "verified": { "status": "completed", "timestamp": "2024-01-01T00:00:03Z" },
+      "scripted": { "status": "completed", "timestamp": "2024-01-01T00:00:04Z" },
+      "voiced": { "status": "completed", "timestamp": "2024-01-01T00:00:05Z" }
+    }
   }
 }
 ```
 
-#### 4. **Get Audio**
+---
+
+#### 5. **Get Audio URL**
 ```http
 GET /api/audio/:id
 ```
+**Purpose**: Get TTS audio URL for a news item
+
 **Response:**
 ```json
 {
   "success": true,
-  "url": "/audio/sample.mp3"
+  "url": "/audio/sample1.mp3",
+  "duration": 180,
+  "format": "mp3"
 }
 ```
 
-#### 5. **Submit Feedback**
+---
+
+#### 6. **Submit Feedback**
 ```http
 POST /api/feedback
 Content-Type: application/json
@@ -300,21 +396,167 @@ Content-Type: application/json
   "newsId": "1",
   "feedbackType": "like",
   "metadata": {
-    "timestamp": "2024-01-01T00:00:00Z"
+    "timestamp": "2024-01-01T00:00:00Z",
+    "reason": "Helpful content"
   }
 }
 ```
+**Purpose**: Submit user feedback for reinforcement learning
+
+**Feedback Types:**
+- `like`: Positive feedback
+- `skip`: Skip this content
+- `approve`: High-quality content marker
+- `flag`: Report problematic content (requires `reason` in metadata)
+
 **Response:**
 ```json
 {
   "success": true,
-  "message": "Feedback recorded"
+  "message": "Feedback recorded",
+  "timestamp": "2024-01-01T00:00:00Z"
+}
+```
+
+---
+
+#### 7. **Get Categories**
+```http
+GET /api/categories
+```
+**Purpose**: Get list of available news categories
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    { "id": "all", "name": "All News", "count": 125 },
+    { "id": "technology", "name": "Technology", "count": 45 },
+    { "id": "business", "name": "Business", "count": 32 },
+    { "id": "science", "name": "Science", "count": 18 },
+    { "id": "environment", "name": "Environment", "count": 15 }
+  ]
 }
 ```
 
 ### JSON Schemas
 
-#### News Item Schema
+#### Complete Workflow Response Schema
+```typescript
+interface WorkflowResponse {
+  success: boolean
+  data: {
+    url: string
+    timestamp: string
+    workflow_steps: string[]
+    processing_time: {
+      scraping: number
+      vetting: number
+      summarization: number
+      prompt_generation: number
+      video_search: number
+    }
+    scraped_data: ScrapedData
+    vetting_results: VettingResults
+    summary: SummaryData
+    video_prompt: VideoPromptData
+    sidebar_videos: VideoSearchResults
+    total_processing_time: number
+    workflow_complete: boolean
+    steps_completed: number
+  }
+  message: string
+  timestamp: string
+}
+```
+
+#### Scraped Data Schema
+```typescript
+interface ScrapedData {
+  title: string
+  content: string
+  content_length: number
+  author?: string
+  date?: string
+  publisher?: string
+  url: string
+  metadata?: {
+    [key: string]: any
+  }
+}
+```
+
+#### Vetting Results Schema
+```typescript
+interface VettingResults {
+  authenticity_score: number        // 0-100
+  authenticity_level: string         // "HIGH" | "MEDIUM" | "LOW" | "VERY_HIGH" | "LIMITED"
+  credibility_rating: string         // "High" | "Medium" | "Low"
+  reliability_status: string         // "Reliable" | "Questionable" | "Unreliable"
+  confidence: number                 // 0-1
+  recommendation: string
+  scoring_breakdown: {
+    source_credibility: number       // 0-25
+    content_analysis: number         // 0-40
+    cross_verification: number       // 0-20
+    bias_analysis: number           // 0-15
+  }
+  analysis_details: {
+    content_type?: string           // "article" | "listing_page"
+    guidance?: string
+    analysis_method: string         // "ai_analysis" | "enhanced_rule_based" | "hybrid"
+  }
+  analyzed_at: string
+  analysis_version: string
+}
+```
+
+#### Summary Data Schema
+```typescript
+interface SummaryData {
+  text: string
+  original_length: number
+  summary_length: number
+  compression_ratio: number
+  key_points?: string[]
+  timeline?: Array<{
+    event: string
+    time: string
+  }>
+  impact_assessment?: string
+}
+```
+
+#### Video Prompt Schema
+```typescript
+interface VideoPromptData {
+  prompt: string
+  for_video_creation: boolean
+  based_on_summary: boolean
+  visualization_instructions?: string[]
+}
+```
+
+#### Video Search Results Schema
+```typescript
+interface VideoSearchResults {
+  videos: Array<{
+    title: string
+    url: string
+    thumbnail?: string
+    duration?: string
+    source: string              // "youtube" | "twitter"
+    description?: string
+    relevance_score?: number
+  }>
+  total_found: number
+  ready_for_playback: boolean
+  content_source?: string
+}
+```
+
+#### News Item Schema (for Feed/List)
 ```typescript
 interface NewsItem {
   id: string
@@ -324,7 +566,7 @@ interface NewsItem {
   url: string
   status: 'completed' | 'processing' | 'pending' | 'flagged'
   timestamp: string
-  content: string
+  content?: string
   summary: string
   audioUrl: string | null
   audioDuration: number
@@ -337,11 +579,11 @@ interface NewsItem {
 #### Insights Schema
 ```typescript
 interface InsightsData {
-  sentiment: string
-  tone: string
+  sentiment: string              // "positive" | "negative" | "neutral" | "excited" | "concerned" | "hopeful"
+  tone: string                   // "informative" | "urgent" | "serious" | "optimistic" | "scientific"
   category: string
-  credibilityScore: number  // 0-1
-  biasScore: number         // 0-1
+  credibilityScore: number       // 0-1 (0-100%)
+  biasScore: number             // 0-1 (0-100%)
   keywords: string[]
   entities: string[]
 }
@@ -361,6 +603,26 @@ interface PipelineData {
 interface PipelineStep {
   status: 'completed' | 'processing' | 'pending' | 'failed'
   timestamp: string | null
+}
+```
+
+#### Feedback Schema
+```typescript
+interface FeedbackData {
+  likes: number
+  skips: number
+  flags: number
+  approves?: number
+}
+
+interface FeedbackRequest {
+  newsId: string
+  feedbackType: 'like' | 'skip' | 'approve' | 'flag'
+  metadata: {
+    timestamp: string
+    reason?: string              // Required for 'flag' type
+    previousFeedback?: string
+  }
 }
 ```
 
@@ -601,24 +863,134 @@ All components are modular and can be customized individually in the `/component
 
 ### Backend Connection Issues
 
-If backend is offline, the app automatically uses mock data. Check:
-1. Backend is running on correct port
-2. CORS is properly configured
-3. API_BASE_URL is correct
+**Problem**: Backend status shows "offline" or API calls fail
+
+**Solutions**:
+1. Verify backend is running on `http://localhost:8000`
+   ```bash
+   # Check if backend is running
+   curl http://localhost:8000/health
+   ```
+2. Check CORS configuration in backend
+3. Verify `NEXT_PUBLIC_API_BASE_URL` in `.env.local`
+4. Check browser console for CORS errors
+5. App will automatically use mock data if backend is offline
+
+### API Endpoint Errors
+
+**Problem**: API calls return errors or timeouts
+
+**Solutions**:
+1. Check network tab in browser DevTools
+2. Verify endpoint URL is correct
+3. Check request payload format
+4. Verify backend is accepting requests
+5. Check for rate limiting
 
 ### Audio Playback Issues
 
-- Ensure audio files are in `/public/audio/`
-- Check browser console for errors
-- Verify audio URLs are accessible
+**Problem**: TTS audio doesn't play
+
+**Solutions**:
+1. Ensure audio files are in `/public/audio/` directory
+2. Check browser console for errors
+3. Verify audio URLs are accessible (check Network tab)
+4. Check audio format compatibility (MP3 recommended)
+5. Try different browser (some browsers have audio restrictions)
 
 ### Build Errors
 
+**Problem**: `npm run build` fails
+
+**Solutions**:
 ```bash
 # Clean install
-rm -rf node_modules package-lock.json
+rm -rf node_modules package-lock.json .next
 npm install
+
+# Clear Next.js cache
+rm -rf .next
+
+# Try building again
+npm run build
 ```
+
+### TypeScript Errors
+
+**Problem**: TypeScript compilation errors
+
+**Solutions**:
+1. Check `tsconfig.json` configuration
+2. Verify all types are imported correctly
+3. Run type checking: `npx tsc --noEmit`
+4. Check for missing type definitions
+
+### Component Not Rendering
+
+**Problem**: Component doesn't appear or shows blank
+
+**Solutions**:
+1. Check browser console for errors
+2. Verify component is imported correctly
+3. Check if data is being passed as props
+4. Verify component is exported correctly
+5. Check for conditional rendering logic
+
+### Pipeline Status Not Updating
+
+**Problem**: Pipeline viewer shows stuck status
+
+**Solutions**:
+1. Check backend is processing the request
+2. Verify WebSocket/SSE connection (if used)
+3. Check polling interval in code
+4. Verify API response includes pipeline status
+5. Check browser console for errors
+
+### Feedback Not Saving
+
+**Problem**: Feedback doesn't persist
+
+**Solutions**:
+1. Check localStorage is enabled in browser
+2. Verify feedback API endpoint is working
+3. Check browser console for errors
+4. Verify feedback payload format
+5. Check localStorage quota (browsers have limits)
+
+### Responsive Design Issues
+
+**Problem**: Layout breaks on mobile/tablet
+
+**Solutions**:
+1. Test in browser DevTools responsive mode
+2. Check Tailwind breakpoints are correct
+3. Verify viewport meta tag in `layout.tsx`
+4. Test on actual devices
+5. Check for fixed widths that don't adapt
+
+### Performance Issues
+
+**Problem**: App is slow or laggy
+
+**Solutions**:
+1. Check bundle size: `npm run build` and review output
+2. Verify images are optimized
+3. Check for memory leaks in console
+4. Use React DevTools Profiler
+5. Check network requests (too many API calls?)
+6. Verify code splitting is working
+
+### Environment Variables Not Working
+
+**Problem**: Environment variables not loading
+
+**Solutions**:
+1. Ensure variables start with `NEXT_PUBLIC_` for client-side
+2. Restart dev server after changing `.env.local`
+3. Verify `.env.local` is in root directory
+4. Check for typos in variable names
+5. Clear `.next` cache and rebuild
 
 ---
 
