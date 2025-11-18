@@ -17,8 +17,21 @@ import time
 import re
 import urllib.parse
 from urllib.parse import urlparse, parse_qs
+import sys
 
 load_dotenv()
+
+# Ensure stdout/stderr can emit Unicode characters (e.g. emoji) on Windows consoles
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+if hasattr(sys.stderr, "reconfigure"):
+    try:
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 app = FastAPI(title="Unified Tools API", version="2.0.0")
 
@@ -426,21 +439,44 @@ class ScrapingService:
                     "validation_result": validation
                 }
             
-            headers = {
+            # Some publishers (NYTimes, WSJ, etc.) aggressively block non-browser headers.
+            # Try a couple of header profiles before giving up.
+            primary_headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
                 'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Cache-Control': 'max-age=0'
+                'Cache-Control': 'no-cache'
+            }
+            
+            fallback_headers = {
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.8',
+                'Connection': 'keep-alive',
+                'Referer': 'https://www.google.com/'
             }
 
-            response = requests.get(url, headers=headers, timeout=15)
-            response.raise_for_status()
+            response = None
+            last_error = None
+            for header_profile in (primary_headers, fallback_headers):
+                try:
+                    response = requests.get(url, headers=header_profile, timeout=20)
+                    response.raise_for_status()
+                    break
+                except requests.HTTPError as http_err:
+                    last_error = http_err
+                    status = getattr(http_err.response, "status_code", None)
+                    # Retry with fallback headers if access is forbidden/unauthorized.
+                    if status in (401, 403, 429):
+                        continue
+                    raise HTTPException(status_code=400, detail=f"Scraping failed: {str(http_err)}")
+                except requests.RequestException as req_err:
+                    raise HTTPException(status_code=400, detail=f"Scraping failed: {str(req_err)}")
+
+            if response is None:
+                raise HTTPException(status_code=400, detail="Scraping failed: Access was blocked by the publisher.")
 
             soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -3957,7 +3993,7 @@ class VettingService:
                     print(f"Grok AI analysis failed: {e}")
 
             # 3) Fallback to enhanced rule-based analysis
-            print("🔄 Using enhanced rule-based content analysis")
+            print("[INFO] Using enhanced rule-based content analysis")
             return VettingService.enhanced_rule_based_analysis(content, title)
 
         except Exception as e:
@@ -4219,12 +4255,12 @@ class VettingService:
         WORKING news authenticity analysis with proper scoring
         """
         try:
-            print(f"🚀 Starting authenticity analysis...")
+            print("[INFO] Starting authenticity analysis...")
             print(f"   Content length: {len(content)} characters")
-            
+
             # Initialize with working base scores
             authenticity_score = 0.0
-            
+
             # 1. Source Credibility (25 points)
             if url:
                 source_analysis = await VettingService.analyze_source_credibility(url)
@@ -4501,7 +4537,7 @@ class VettingService:
             
         except Exception as e:
             print(f"AI text parsing failed: {e}")
-            print("🔄 Falling back to enhanced rule-based analysis...")
+            print("[INFO] Falling back to enhanced rule-based analysis...")
             return VettingService.enhanced_rule_based_analysis(content, title)
 
     @staticmethod
@@ -4520,7 +4556,7 @@ class VettingService:
         positive_indicators = []
 
         if not content or len(content.strip()) < 10:
-            print("⚠️ Content too short or empty")
+            print("[WARN] Content too short or empty")
             return {
                 "factual_score": 30,
                 "bias_score": 50,
@@ -4539,7 +4575,7 @@ class VettingService:
         word_count = len(content.split())
         sentence_count = len([s for s in content.split('.') if s.strip()])
 
-        print(f"📊 Content stats: {word_count} words, {sentence_count} sentences")
+        print(f"[DEBUG] Content stats: {word_count} words, {sentence_count} sentences")
 
         # 1. FACTUAL ACCURACY INDICATORS
         factual_phrases = [
@@ -4611,7 +4647,7 @@ class VettingService:
         attribution_score = max(0, min(100, attribution_score))
         timeliness_score = max(0, min(100, timeliness_score))
 
-        print(f"📊 Final scores: Factual={factual_score}, Bias={bias_score}, Quality={quality_score}, Attribution={attribution_score}")
+        print(f"[DEBUG] Final scores: Factual={factual_score}, Bias={bias_score}, Quality={quality_score}, Attribution={attribution_score}")
 
         # Overall authenticity rating
         overall_score = (factual_score * 0.3 + bias_score * 0.25 + quality_score * 0.25 + attribution_score * 0.2)
@@ -4647,7 +4683,7 @@ class VettingService:
             }
         }
 
-        print(f"✅ Analysis complete: {authenticity_rating} ({overall_score:.1f}/100)")
+        print(f"[INFO] Analysis complete: {authenticity_rating} ({overall_score:.1f}/100)")
         return result
         if re.search(r'\b(19|20)\d{2}\b', content):  # Years
             factual_score += 10
@@ -5948,16 +5984,16 @@ async def unified_news_workflow(request: Dict[str, Any]):
 
         # Step 1: Web Scraping
         start_time = time.time()
-        print(f"🌐 Starting scraping step for URL: {url}")
+        print(f"[INFO] Starting scraping step for URL: {url}")
         try:
             scraped_data = await ScrapingService.scrape_website(url, max_pages=1)
-            print(f"✅ Scraping completed. Data keys: {list(scraped_data.keys()) if scraped_data else 'None'}")
+            print(f"[INFO] Scraping completed. Data keys: {list(scraped_data.keys()) if scraped_data else 'None'}")
             workflow_result["processing_time"]["scraping"] = round(time.time() - start_time, 2)
             workflow_result["workflow_steps"].append("scraping")
 
             # ScrapingService returns the data directly, not wrapped in success/failure
             if not scraped_data or not scraped_data.get("title"):
-                print(f"❌ Scraping failed: No content extracted")
+                print("[ERROR] Scraping failed: No content extracted")
                 return UnifiedResponse(
                     success=False,
                     data=workflow_result,
@@ -5971,10 +6007,10 @@ async def unified_news_workflow(request: Dict[str, Any]):
                 "data": scraped_data,
                 "message": "Scraping completed successfully"
             }
-            print(f"✅ Scraping result created successfully")
+            print("[INFO] Scraping result created successfully")
 
         except Exception as e:
-            print(f"❌ Scraping step failed with exception: {e}")
+            print(f"[ERROR] Scraping step failed with exception: {e}")
             workflow_result["processing_time"]["scraping"] = round(time.time() - start_time, 2)
             workflow_result["workflow_steps"].append("scraping")
             return UnifiedResponse(
@@ -6013,15 +6049,15 @@ async def unified_news_workflow(request: Dict[str, Any]):
 
         try:
             vetting_result = await VettingService.vet_content(vetting_data, vetting_criteria)
-            print(f"✅ Vetting completed. Result keys: {list(vetting_result.keys())}")
+            print(f"[INFO] Vetting completed. Result keys: {list(vetting_result.keys())}")
             workflow_result["processing_time"]["vetting"] = round(time.time() - start_time, 2)
             workflow_result["workflow_steps"].append("vetting")
 
             # Extract authenticity data from nested structure
             authenticity_analysis = vetting_result.get("authenticity_analysis", {})
-            print(f"📊 Authenticity analysis keys: {list(authenticity_analysis.keys())}")
+            print(f"[DEBUG] Authenticity analysis keys: {list(authenticity_analysis.keys())}")
             authenticity_score = authenticity_analysis.get("authenticity_score", 0)
-            print(f"🎯 Final authenticity score: {authenticity_score}")
+            print(f"[INFO] Final authenticity score: {authenticity_score}")
             
             # Preserve the enhanced authenticity analysis fields
             workflow_result["vetting_results"] = {
@@ -6037,10 +6073,10 @@ async def unified_news_workflow(request: Dict[str, Any]):
                 "analyzed_at": authenticity_analysis.get("analyzed_at", datetime.now().isoformat()),
                 "analysis_version": authenticity_analysis.get("analysis_version", "enhanced_v2.0")
             }
-            print(f"✅ Vetting results created with score: {workflow_result['vetting_results']['authenticity_score']}")
+            print(f"[INFO] Vetting results created with score: {workflow_result['vetting_results']['authenticity_score']}")
             
         except Exception as vetting_error:
-            print(f"❌ Vetting step failed: {vetting_error}")
+            print(f"[ERROR] Vetting step failed: {vetting_error}")
             workflow_result["processing_time"]["vetting"] = round(time.time() - start_time, 2)
             workflow_result["workflow_steps"].append("vetting_failed")
             # Add default vetting results on error
