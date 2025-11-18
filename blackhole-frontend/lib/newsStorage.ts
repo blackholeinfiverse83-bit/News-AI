@@ -95,6 +95,15 @@ export function saveScrapedNews(scrapedData: any, url: string): SavedNewsItem | 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('newsArticleSaved', { detail: newsItem }))
     }
+
+    // Persist to server for cross-session news feed
+    if (typeof fetch !== 'undefined') {
+      fetch('/api/scraped-news', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newsItem)
+      }).catch(error => console.error('Failed to sync scraped news to server:', error))
+    }
     
     return newsItem
   } catch (error) {

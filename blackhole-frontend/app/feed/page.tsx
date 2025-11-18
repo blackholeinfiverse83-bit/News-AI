@@ -57,7 +57,9 @@ export default function NewsFeed() {
     window.addEventListener('newsArticleSaved', handleNewsSaved)
     
     // Also check periodically for changes (in case same tab adds articles)
-    const refreshInterval = setInterval(loadNewsFeed, 3000)
+    const refreshInterval = setInterval(() => {
+      loadNewsFeed()
+    }, 3000)
     
     return () => {
       clearInterval(interval)
@@ -76,22 +78,25 @@ export default function NewsFeed() {
     }
   }
 
-  const loadNewsFeed = () => {
+  const loadNewsFeed = async () => {
     // Load saved scraped articles from localStorage
     const savedArticles = getSavedNews()
-    const scrapedNews: NewsItem[] = savedArticles.map(item => ({
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      url: item.url,
-      source: item.source,
-      category: item.category,
-      imageUrl: item.imageUrl,
-      publishedAt: item.publishedAt,
-      readTime: item.readTime,
-      isScraped: true,
-      relatedVideos: item.relatedVideos
-    }))
+    const localScraped = mapSavedItemsToNews(savedArticles)
+
+    let serverScraped: NewsItem[] = []
+    try {
+      const response = await fetch('/api/scraped-news')
+      if (response.ok) {
+        const data = await response.json()
+        if (Array.isArray(data?.data)) {
+          serverScraped = mapSavedItemsToNews(data.data as SavedNewsItem[])
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load server-saved articles:', error)
+    }
+
+    const scrapedNews = mergeByUrl([...serverScraped, ...localScraped])
 
     // Sample news items - in production, this would come from an API
     const sampleNews: NewsItem[] = [
@@ -547,10 +552,39 @@ export default function NewsFeed() {
 
 function getVideoEmbedUrl(url?: string) {
   if (!url) return null
-  const youtubeMatch = url.match(/(?:youtube\.com\/watch\\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/)
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/)
   if (youtubeMatch) {
     return `https://www.youtube.com/embed/${youtubeMatch[1]}?autoplay=1`
   }
   return null
+}
+
+function mapSavedItemsToNews(items: SavedNewsItem[]): NewsItem[] {
+  return items.map(item => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    url: item.url,
+    source: item.source,
+    category: item.category,
+    imageUrl: item.imageUrl,
+    publishedAt: item.publishedAt,
+    readTime: item.readTime,
+    isScraped: true,
+    relatedVideos: item.relatedVideos
+  }))
+}
+
+function mergeByUrl(items: NewsItem[]): NewsItem[] {
+  const seen = new Set<string>()
+  const merged: NewsItem[] = []
+  for (const item of items) {
+    const key = item.url || item.id
+    if (!seen.has(key)) {
+      seen.add(key)
+      merged.push(item)
+    }
+  }
+  return merged
 }
 
