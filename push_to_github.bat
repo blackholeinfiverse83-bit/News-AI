@@ -23,7 +23,8 @@ if "%REPO_URL%"=="" (
 )
 
 echo.
-echo Adding remote origin...
+echo Setting up remote origin...
+git remote remove origin 2>nul
 git remote add origin %REPO_URL%
 
 echo.
