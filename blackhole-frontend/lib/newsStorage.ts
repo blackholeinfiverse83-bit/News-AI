@@ -17,6 +17,13 @@ export interface SavedNewsItem {
   scrapedData?: any
   summary?: string
   insights?: any
+  relatedVideos?: Array<{
+    title?: string
+    url?: string
+    thumbnail?: string
+    duration?: string
+    source?: string
+  }>
 }
 
 const STORAGE_KEY = 'scraped_news_articles'
@@ -44,6 +51,9 @@ export function saveScrapedNews(scrapedData: any, url: string): SavedNewsItem | 
     const contentLength = scrapedData.scraped_data?.content_length || description.length
     const readTime = Math.ceil(contentLength / 1000) + ' min read'
 
+    const imageUrl = findBestImage(scrapedData, title)
+    const relatedVideos = extractRelatedVideos(scrapedData)
+
     // Create news item
     const newsItem: SavedNewsItem = {
       id: `scraped_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -52,12 +62,14 @@ export function saveScrapedNews(scrapedData: any, url: string): SavedNewsItem | 
       url: url,
       source: source,
       category: category,
+      imageUrl,
       publishedAt: formatTimeAgo(date),
       readTime: readTime,
       scrapedAt: new Date().toISOString(),
       scrapedData: scrapedData,
       summary: typeof scrapedData.summary === 'string' ? scrapedData.summary : scrapedData.summary?.text,
-      insights: scrapedData.vetting_results || scrapedData.insights
+      insights: scrapedData.vetting_results || scrapedData.insights,
+      relatedVideos
     }
 
     // Get existing articles
@@ -207,5 +219,40 @@ function formatTimeAgo(timestamp: string): string {
   } catch {
     return 'Recently'
   }
+}
+
+function findBestImage(scrapedData: any, title: string): string | undefined {
+  const candidates = [
+    scrapedData.scraped_data?.metadata?.image,
+    scrapedData.scraped_data?.metadata?.ogImage,
+    scrapedData.scraped_data?.metadata?.twitterImage,
+    scrapedData.scraped_data?.images?.[0]?.url,
+    scrapedData.sidebar_videos?.videos?.[0]?.thumbnail,
+    scrapedData.ai_video_generation?.video_data?.thumbnail,
+  ]
+  const selected = candidates.find(Boolean)
+  if (selected) return selected
+
+  // Fallback: use a themed image (unsplash) based on article title/keywords
+  const keyword = encodeURIComponent((title || 'news').split(' ').slice(0, 4).join(' '))
+  return `https://source.unsplash.com/800x600/?news,${keyword}`
+}
+
+function extractRelatedVideos(scrapedData: any) {
+  const videos = scrapedData.sidebar_videos?.videos || scrapedData.related_videos || []
+  if (!Array.isArray(videos)) return undefined
+
+  const mapped = videos
+    .filter((video: any) => video && (video.url || video.source))
+    .map((video: any) => ({
+      title: video.title || video.source || 'Related Video',
+      url: video.url || video.videoUrl,
+      thumbnail: video.thumbnail,
+      duration: video.duration,
+      source: video.source
+    }))
+    .filter(video => video.url)
+
+  return mapped.length ? mapped : undefined
 }
 

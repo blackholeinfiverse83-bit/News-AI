@@ -6,7 +6,7 @@ import Header from '@/components/Header'
 import BackendStatus from '@/components/BackendStatus'
 import { checkBackendHealth } from '@/lib/api'
 import { getSavedNews, removeSavedNews, SavedNewsItem } from '@/lib/newsStorage'
-import { Search, Filter, TrendingUp, Clock, Globe, Newspaper, Trash2 } from 'lucide-react'
+import { Search, Filter, TrendingUp, Clock, Globe, Newspaper, Trash2, PlayCircle, X } from 'lucide-react'
 
 interface NewsItem {
   id: string
@@ -19,6 +19,13 @@ interface NewsItem {
   publishedAt: string
   readTime?: string
   isScraped?: boolean
+  relatedVideos?: Array<{
+    title?: string
+    url?: string
+    thumbnail?: string
+    duration?: string
+    source?: string
+  }>
 }
 
 export default function NewsFeed() {
@@ -27,6 +34,10 @@ export default function NewsFeed() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
+  const [activeVideo, setActiveVideo] = useState<{
+    article: NewsItem
+    video: NonNullable<NewsItem['relatedVideos']>[number]
+  } | null>(null)
 
   useEffect(() => {
     checkBackend()
@@ -78,7 +89,8 @@ export default function NewsFeed() {
       imageUrl: item.imageUrl,
       publishedAt: item.publishedAt,
       readTime: item.readTime,
-      isScraped: true
+      isScraped: true,
+      relatedVideos: item.relatedVideos
     }))
 
     // Sample news items - in production, this would come from an API
@@ -246,6 +258,14 @@ export default function NewsFeed() {
     router.push(`/?url=${encodeURIComponent(url)}`)
   }
 
+  const handleNewsCardClick = (news: NewsItem) => {
+    if (news.isScraped && news.relatedVideos && news.relatedVideos.length > 0) {
+      setActiveVideo({ article: news, video: news.relatedVideos[0] })
+      return
+    }
+    handleAnalyzeArticle(news.url)
+  }
+
   const handleRemoveArticle = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (confirm('Remove this article from your feed?')) {
@@ -324,7 +344,7 @@ export default function NewsFeed() {
             <div
               key={news.id}
               className="glass-effect rounded-xl overflow-hidden border border-white/20 hover:border-purple-400/50 transition-all duration-300 hover:scale-105 cursor-pointer group"
-              onClick={() => handleAnalyzeArticle(news.url)}
+              onClick={() => handleNewsCardClick(news)}
             >
               {/* Image */}
               {news.imageUrl && (
@@ -380,16 +400,32 @@ export default function NewsFeed() {
                     <Clock className="w-3 h-3 mr-1" />
                     {news.readTime}
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleAnalyzeArticle(news.url)
-                    }}
-                    className="text-sm text-purple-400 hover:text-purple-300 font-semibold flex items-center group/btn"
-                  >
-                    Analyze with AI
-                    <span className="ml-1 group-hover/btn:translate-x-1 transition-transform">→</span>
-                  </button>
+                  <div className="flex items-center space-x-3">
+                    {news.isScraped && news.relatedVideos?.length ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleNewsCardClick(news)
+                        }}
+                        className="text-sm text-pink-400 hover:text-pink-300 font-semibold flex items-center group/btn"
+                      >
+                        <PlayCircle className="w-4 h-4 mr-1" />
+                        Watch Video
+                        <span className="ml-1 group-hover/btn:translate-x-1 transition-transform">▶</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleAnalyzeArticle(news.url)
+                        }}
+                        className="text-sm text-purple-400 hover:text-purple-300 font-semibold flex items-center group/btn"
+                      >
+                        Analyze with AI
+                        <span className="ml-1 group-hover/btn:translate-x-1 transition-transform">→</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -429,7 +465,92 @@ export default function NewsFeed() {
           </div>
         </div>
       </main>
+
+      {/* Video Modal */}
+      {activeVideo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl border border-white/10">
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+              <div>
+                <p className="text-sm text-purple-300 uppercase tracking-wide">Related Video</p>
+                <h3 className="text-xl font-bold text-white">{activeVideo.article.title}</h3>
+                <p className="text-gray-400 text-sm">
+                  Source: {activeVideo.video.source || 'YouTube'}
+                </p>
+              </div>
+              <button
+                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                onClick={() => setActiveVideo(null)}
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="relative w-full pb-[56.25%] rounded-xl overflow-hidden border border-white/10">
+                {getVideoEmbedUrl(activeVideo.video.url) ? (
+                  <iframe
+                    src={getVideoEmbedUrl(activeVideo.video.url)!}
+                    className="absolute inset-0 w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={activeVideo.video.title || 'Related video'}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white space-y-4">
+                    <p className="text-center px-6">
+                      Unable to embed this video. Open it directly to view.
+                    </p>
+                    <a
+                      href={activeVideo.video.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-purple-500 rounded-full font-semibold hover:bg-purple-600 transition-colors"
+                    >
+                      Open Video
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3 justify-between">
+                <div className="text-sm text-gray-400 flex flex-col">
+                  {activeVideo.video.title && (
+                    <span className="text-white font-semibold">{activeVideo.video.title}</span>
+                  )}
+                  {activeVideo.video.duration && <span>Duration: {activeVideo.video.duration}</span>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleAnalyzeArticle(activeVideo.article.url)}
+                    className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-full border border-purple-400/50 hover:bg-purple-500/30 transition-colors"
+                  >
+                    Analyze Article
+                  </button>
+                  <a
+                    href={activeVideo.video.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-white/10 text-white rounded-full border border-white/20 hover:bg-white/20 transition-colors"
+                  >
+                    Open on {activeVideo.video.source || 'YouTube'}
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
+}
+
+function getVideoEmbedUrl(url?: string) {
+  if (!url) return null
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\\?v=|youtu\.be\/)([A-Za-z0-9_-]+)/)
+  if (youtubeMatch) {
+    return `https://www.youtube.com/embed/${youtubeMatch[1]}?autoplay=1`
+  }
+  return null
 }
 
