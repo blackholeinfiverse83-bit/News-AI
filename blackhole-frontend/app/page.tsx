@@ -8,7 +8,7 @@ import VideoPlayer from '@/components/VideoPlayer'
 import ResultsDisplay from '@/components/ResultsDisplay'
 import BackendStatus from '@/components/BackendStatus'
 import { checkBackendHealth } from '@/lib/api'
-import { saveScrapedNews } from '@/lib/newsStorage'
+import { saveScrapedNews, getSavedNews } from '@/lib/newsStorage'
 
 interface AnalysisResults {
   scraped_data?: {
@@ -66,12 +66,77 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(0)
   const [analyzedUrl, setAnalyzedUrl] = useState<string>('')
   const [showSavedNotification, setShowSavedNotification] = useState(false)
+  const [feedVideos, setFeedVideos] = useState<Array<{
+    title: string
+    url: string
+    thumbnail?: string
+    duration?: string
+    source: string
+  }>>([])
 
   useEffect(() => {
     checkBackend()
+    loadFeedVideos()
     const interval = setInterval(checkBackend, 30000) // Check every 30 seconds
-    return () => clearInterval(interval)
+    
+    // Listen for new articles being saved
+    const handleNewsSaved = () => {
+      loadFeedVideos()
+    }
+    window.addEventListener('newsArticleSaved', handleNewsSaved)
+    
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('newsArticleSaved', handleNewsSaved)
+    }
   }, [])
+
+  const loadFeedVideos = () => {
+    try {
+      const savedNews = getSavedNews()
+      const allVideos: Array<{
+        title: string
+        url: string
+        thumbnail?: string
+        duration?: string
+        source: string
+      }> = []
+      
+      savedNews.forEach(article => {
+        if (article.relatedVideos && Array.isArray(article.relatedVideos)) {
+          article.relatedVideos.forEach(video => {
+            if (video.url && video.title) {
+              // Convert YouTube watch URLs to embed URLs for better compatibility
+              let videoUrl = video.url
+              if (video.url.includes('youtube.com/watch?v=')) {
+                const videoId = video.url.match(/[?&]v=([^&]+)/)?.[1]
+                if (videoId) {
+                  videoUrl = `https://www.youtube.com/embed/${videoId}`
+                }
+              } else if (video.url.includes('youtu.be/')) {
+                const videoId = video.url.split('youtu.be/')[1]?.split('?')[0]
+                if (videoId) {
+                  videoUrl = `https://www.youtube.com/embed/${videoId}`
+                }
+              }
+              
+              allVideos.push({
+                title: video.title,
+                url: videoUrl,
+                thumbnail: video.thumbnail,
+                duration: video.duration,
+                source: video.source || 'YouTube'
+              })
+            }
+          })
+        }
+      })
+      
+      setFeedVideos(allVideos)
+    } catch (error) {
+      console.error('Error loading feed videos:', error)
+    }
+  }
 
   const checkBackend = async () => {
     try {
@@ -89,24 +154,99 @@ export default function Home() {
       summary: results?.summary ? 'Present' : 'Missing',
       vettingResults: results?.vetting_results ? 'Present' : 'Missing',
       scrapedData: results?.scraped_data ? 'Present' : 'Missing',
+      analyzedUrl: analyzedUrl,
+      resultsUrl: results?.url,
+      scrapedDataUrl: results?.scraped_data?.url,
       fullResults: results
     })
     setAnalysisResults(results)
     setIsAnalyzing(false)
     setCurrentStep(0)
     
+    // Extract URL from results if analyzedUrl is not set - check multiple locations
+    const articleUrl = analyzedUrl || 
+                       results?.url || 
+                       results?.scraped_data?.url ||
+                       (results as any)?.scraped_content?.url ||
+                       ''
+    
+    console.log('🔍 URL extraction:', {
+      analyzedUrl,
+      resultsUrl: results?.url,
+      scrapedDataUrl: results?.scraped_data?.url,
+      finalArticleUrl: articleUrl,
+      hasArticleUrl: !!articleUrl
+    })
+    
     // Save scraped news to localStorage for the feed
-    if (results && analyzedUrl) {
+    if (results && articleUrl && articleUrl.trim() !== '') {
       try {
-        const saved = saveScrapedNews(results, analyzedUrl)
+        console.log('💾 Attempting to save article:', {
+          url: articleUrl,
+          hasResults: !!results,
+          resultsStructure: Object.keys(results)
+        })
+        
+        const saved = saveScrapedNews(results, articleUrl)
         if (saved) {
-          console.log('✅ News article saved to feed:', saved.title)
+          console.log('✅ News article saved to feed:', saved.title, {
+            category: saved.category,
+            imageUrl: saved.imageUrl,
+            hasImage: !!saved.imageUrl,
+            id: saved.id,
+            url: saved.url
+          })
           // Show notification
           setShowSavedNotification(true)
           setTimeout(() => setShowSavedNotification(false), 5000)
+          // Refresh feed videos
+          loadFeedVideos()
+          
+          // Force refresh the feed page if it's open
+          window.dispatchEvent(new CustomEvent('newsArticleSaved', { detail: saved }))
+          
+          // Also trigger a storage event for cross-tab sync
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem('newsFeedUpdated', Date.now().toString())
+          }
+        } else {
+          console.warn('⚠️ Failed to save article to feed - saveScrapedNews returned null', {
+            url: articleUrl,
+            results: results
+          })
         }
       } catch (error) {
-        console.error('Error saving news to feed:', error)
+        console.error('❌ Error saving news to feed:', error)
+      }
+    } else {
+      console.warn('⚠️ Cannot save article - missing data:', {
+        hasResults: !!results,
+        hasUrl: !!articleUrl,
+        articleUrlValue: articleUrl,
+        analyzedUrl: analyzedUrl,
+        resultsUrl: results?.url,
+        scrapedDataUrl: results?.scraped_data?.url
+      })
+      
+      // Try to save anyway if we have results, even without URL (use a fallback)
+      if (results) {
+        const fallbackUrl = results?.url || `scraped-${Date.now()}`
+        console.log('🔄 Attempting save with fallback URL:', fallbackUrl)
+        try {
+          const saved = saveScrapedNews(results, fallbackUrl)
+          if (saved) {
+            console.log('✅ Article saved with fallback URL:', saved.title)
+            setShowSavedNotification(true)
+            setTimeout(() => setShowSavedNotification(false), 5000)
+            loadFeedVideos()
+            window.dispatchEvent(new CustomEvent('newsArticleSaved', { detail: saved }))
+            if (typeof window !== 'undefined' && window.localStorage) {
+              window.localStorage.setItem('newsFeedUpdated', Date.now().toString())
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error saving with fallback URL:', error)
+        }
       }
     }
   }
@@ -211,16 +351,19 @@ export default function Home() {
           {/* Video Sidebar */}
           <div className="xl:col-span-1">
             <VideoPlayer
-              videos={(analysisResults?.sidebar_videos?.videos || []).filter(video => 
-                video && video.title && video.source
-              ).map(video => ({
-                title: video.title!,
-                url: video.url || '',
-                thumbnail: video.thumbnail,
-                duration: video.duration,
-                source: video.source!
-              }))}
-              title={analysisResults ? "Related Videos" : "Demo Videos"}
+              videos={analysisResults 
+                ? (analysisResults?.sidebar_videos?.videos || []).filter(video => 
+                    video && video.title && video.source
+                  ).map(video => ({
+                    title: video.title!,
+                    url: video.url || '',
+                    thumbnail: video.thumbnail,
+                    duration: video.duration,
+                    source: video.source!
+                  }))
+                : feedVideos
+              }
+              title={analysisResults ? "Related Videos" : feedVideos.length > 0 ? "News Feed Videos" : "Demo Videos"}
             />
           </div>
         </div>

@@ -51,10 +51,21 @@ export default function NewsFeed() {
     window.addEventListener('storage', handleStorageChange)
     
     // Listen for custom event when articles are saved in same tab
-    const handleNewsSaved = () => {
+    const handleNewsSaved = (event?: CustomEvent) => {
+      console.log('📰 News article saved event received:', event?.detail)
       loadNewsFeed()
     }
-    window.addEventListener('newsArticleSaved', handleNewsSaved)
+    window.addEventListener('newsArticleSaved', handleNewsSaved as EventListener)
+    
+    // Also listen for localStorage changes
+    const handleStorageUpdate = () => {
+      if (localStorage.getItem('newsFeedUpdated')) {
+        console.log('📰 Storage update detected, refreshing feed')
+        loadNewsFeed()
+        localStorage.removeItem('newsFeedUpdated')
+      }
+    }
+    window.addEventListener('storage', handleStorageUpdate)
     
     // Also check periodically for changes (in case same tab adds articles)
     const refreshInterval = setInterval(() => {
@@ -65,7 +76,8 @@ export default function NewsFeed() {
       clearInterval(interval)
       clearInterval(refreshInterval)
       window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('newsArticleSaved', handleNewsSaved)
+      window.removeEventListener('storage', handleStorageUpdate)
+      window.removeEventListener('newsArticleSaved', handleNewsSaved as EventListener)
     }
   }, [])
 
@@ -81,6 +93,10 @@ export default function NewsFeed() {
   const loadNewsFeed = async () => {
     // Load saved scraped articles from localStorage
     const savedArticles = getSavedNews()
+    console.log('📰 Loading news feed:', {
+      savedArticlesCount: savedArticles.length,
+      savedArticles: savedArticles.map(a => ({ title: a.title, category: a.category, hasImage: !!a.imageUrl }))
+    })
     const localScraped = mapSavedItemsToNews(savedArticles)
 
     let serverScraped: NewsItem[] = []
@@ -97,6 +113,10 @@ export default function NewsFeed() {
     }
 
     const scrapedNews = mergeByUrl([...serverScraped, ...localScraped])
+    console.log('📰 Scraped news loaded:', {
+      scrapedCount: scrapedNews.length,
+      scrapedNews: scrapedNews.map(n => ({ title: n.title, category: n.category, hasImage: !!n.imageUrl }))
+    })
 
     // Sample news items - in production, this would come from an API
     const sampleNews: NewsItem[] = [
@@ -352,20 +372,38 @@ export default function NewsFeed() {
               onClick={() => handleNewsCardClick(news)}
             >
               {/* Image */}
-              {news.imageUrl && (
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={news.imageUrl}
-                    alt={news.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute top-3 left-3">
-                    <span className="px-3 py-1 bg-purple-500/90 text-white text-xs font-semibold rounded-full backdrop-blur-sm">
-                      {news.category}
-                    </span>
+              <div className="relative h-48 overflow-hidden bg-gradient-to-br from-purple-900/20 to-pink-900/20">
+                {news.imageUrl ? (
+                  <>
+                    <img
+                      src={news.imageUrl}
+                      alt={news.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      onError={(e) => {
+                        // Fallback to gradient background if image fails to load
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                    <div className="absolute top-3 left-3">
+                      <span className="px-3 py-1 bg-purple-500/90 text-white text-xs font-semibold rounded-full backdrop-blur-sm capitalize">
+                        {news.category || 'general'}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="text-center p-4">
+                      <Newspaper className="w-12 h-12 text-purple-400/50 mx-auto mb-2" />
+                      <div className="absolute top-3 left-3">
+                        <span className="px-3 py-1 bg-purple-500/90 text-white text-xs font-semibold rounded-full backdrop-blur-sm capitalize">
+                          {news.category || 'general'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Content */}
               <div className="p-5">
@@ -373,8 +411,8 @@ export default function NewsFeed() {
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-purple-400 font-medium">{news.source}</span>
                     {news.isScraped && (
-                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full">
-                        Scraped
+                      <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-semibold rounded-full capitalize">
+                        {news.category || 'general'}
                       </span>
                     )}
                   </div>
@@ -587,4 +625,5 @@ function mergeByUrl(items: NewsItem[]): NewsItem[] {
   }
   return merged
 }
+
 

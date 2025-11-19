@@ -1,7 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Play, Pause, SkipForward, SkipBack, Volume2, Maximize, ExternalLink, AlertCircle } from 'lucide-react'
+
+// YouTube IFrame API types
+declare global {
+  interface Window {
+    YT: any
+    onYouTubeIframeAPIReady: () => void
+  }
+}
 
 interface Video {
   title: string
@@ -25,6 +33,17 @@ export default function VideoPlayer({ videos, title = "Related Videos" }: VideoP
   const [currentTime, setCurrentTime] = useState(0)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [isValidating, setIsValidating] = useState(false)
+  const [youtubePlayer, setYoutubePlayer] = useState<any>(null)
+  const [isYoutubeAPIReady, setIsYoutubeAPIReady] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const playerContainerRef = useRef<HTMLDivElement>(null)
+  const playerRef = useRef<any>(null)
+  
+  // Prevent hydration errors by only rendering iframe on client
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Use default videos if none provided
   const defaultVideos: Video[] = [
@@ -54,40 +73,210 @@ export default function VideoPlayer({ videos, title = "Related Videos" }: VideoP
   const videoList = videos.length > 0 ? videos : defaultVideos
   const currentVideoData = videoList[currentVideo]
 
-  useEffect(() => {
-    // Simulate video progress
-    let interval: NodeJS.Timeout
-    if (isPlaying) {
-      interval = setInterval(() => {
-        setCurrentTime(prev => prev + 1)
-      }, 1000)
+  // Extract YouTube video ID from URL
+  const getYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]+)/,
+      /youtube\.com\/embed\/([A-Za-z0-9_-]+)/
+    ]
+    for (const pattern of patterns) {
+      const match = url.match(pattern)
+      if (match) return match[1]
     }
+    return null
+  }
+
+  const isYouTubeVideo = (url: string): boolean => {
+    return url.includes('youtube.com') || url.includes('youtu.be') || url.includes('embed')
+  }
+
+  // Load YouTube IFrame API
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    // Check if API is already loaded
+    if (window.YT && window.YT.Player) {
+      setIsYoutubeAPIReady(true)
+      return
+    }
+
+    // Load the script if not already loaded
+    const existingScript = document.querySelector('script[src*="youtube.com/iframe_api"]')
+    if (existingScript) {
+      // Wait for API to be ready
+      window.onYouTubeIframeAPIReady = () => {
+        setIsYoutubeAPIReady(true)
+      }
+      return
+    }
+
+    const tag = document.createElement('script')
+    tag.src = 'https://www.youtube.com/iframe_api'
+    const firstScriptTag = document.getElementsByTagName('script')[0]
+    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
+
+    window.onYouTubeIframeAPIReady = () => {
+      setIsYoutubeAPIReady(true)
+    }
+  }, [])
+
+  // Initialize YouTube player when video changes
+  useEffect(() => {
+    if (!isYoutubeAPIReady || !window.YT || !currentVideoData) return
+    if (!isYouTubeVideo(currentVideoData.url)) return
+
+    const videoId = getYouTubeVideoId(currentVideoData.url)
+    if (!videoId || !playerContainerRef.current) return
+
+    // Destroy existing player
+    if (playerRef.current) {
+      try {
+        playerRef.current.destroy()
+      } catch (e) {
+        console.warn('Error destroying YouTube player:', e)
+      }
+      playerRef.current = null
+    }
+
+    // Clear the container
+    if (playerContainerRef.current) {
+      playerContainerRef.current.innerHTML = ''
+    }
+
+    // Create new player
+    try {
+      const player = new window.YT.Player(playerContainerRef.current, {
+        videoId: videoId,
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          modestbranding: 1,
+          rel: 0,
+          showinfo: 0,
+          iv_load_policy: 3
+        },
+        events: {
+          onReady: (event: any) => {
+            playerRef.current = event.target
+            setYoutubePlayer(event.target)
+            setIsPlaying(false)
+            setCurrentTime(0)
+          },
+          onStateChange: (event: any) => {
+            // YT.PlayerState.PLAYING = 1, PAUSED = 2, ENDED = 0
+            if (event.data === 1) {
+              setIsPlaying(true)
+            } else if (event.data === 2 || event.data === 0) {
+              setIsPlaying(false)
+            }
+          },
+          onError: (event: any) => {
+            // YouTube error codes: 2=invalid video, 5=HTML5 error, 100=not found, 101/150=not allowed
+            const errorCodes: { [key: number]: string } = {
+              2: 'Invalid video parameter',
+              5: 'HTML5 player error',
+              100: 'Video not found',
+              101: 'Video not allowed to be played in embedded players',
+              150: 'Video not allowed to be played in embedded players'
+            }
+            const errorMessage = errorCodes[event.data] || 'Video playback error'
+            console.warn('YouTube player error:', errorMessage, 'Code:', event.data)
+            setVideoError(errorMessage)
+            setIsPlaying(false)
+          }
+        }
+      })
+    } catch (error) {
+      console.error('Error creating YouTube player:', error)
+      setVideoError('Failed to load video player')
+    }
+
+    return () => {
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy()
+        } catch (e) {
+          console.warn('Error destroying YouTube player on cleanup:', e)
+        }
+        playerRef.current = null
+      }
+    }
+  }, [currentVideo, isYoutubeAPIReady, currentVideoData?.url])
+
+  // Update current time for YouTube videos
+  useEffect(() => {
+    if (!playerRef.current || !isPlaying) return
+
+    const interval = setInterval(() => {
+      try {
+        if (playerRef.current) {
+          const time = playerRef.current.getCurrentTime()
+          setCurrentTime(Math.floor(time))
+        }
+      } catch (e) {
+        // Player might not be ready
+      }
+    }, 1000)
+
     return () => clearInterval(interval)
-  }, [isPlaying])
+  }, [youtubePlayer, isPlaying])
 
   const togglePlay = () => {
-    setIsPlaying(!isPlaying)
+    if (playerRef.current && isYouTubeVideo(currentVideoData.url)) {
+      try {
+        if (isPlaying) {
+          playerRef.current.pauseVideo()
+        } else {
+          playerRef.current.playVideo()
+        }
+      } catch (error) {
+        console.error('Error toggling YouTube playback:', error)
+        setIsPlaying(!isPlaying)
+      }
+    } else {
+      setIsPlaying(!isPlaying)
+    }
   }
 
   const nextVideo = () => {
+    if (playerRef.current) {
+      try {
+        playerRef.current.stopVideo()
+      } catch (e) {
+        // Ignore errors
+      }
+    }
     setCurrentVideo((prev) => (prev + 1) % videoList.length)
     setCurrentTime(0)
-    setIsPlaying(true)
+    setIsPlaying(false)
   }
 
   const prevVideo = () => {
+    if (playerRef.current) {
+      try {
+        playerRef.current.stopVideo()
+      } catch (e) {
+        // Ignore errors
+      }
+    }
     setCurrentVideo((prev) => (prev - 1 + videoList.length) % videoList.length)
     setCurrentTime(0)
-    setIsPlaying(true)
+    setIsPlaying(false)
   }
 
   const selectVideo = (index: number) => {
+    if (playerRef.current) {
+      try {
+        playerRef.current.stopVideo()
+      } catch (e) {
+        // Ignore errors
+      }
+    }
     setCurrentVideo(index)
     setCurrentTime(0)
     setIsPlaying(false)
     setVideoError(null)
-    // DISABLED: Video validation to prevent API spam
-    // validateCurrentVideo(videoList[index])
   }
 
   const validateCurrentVideo = async (video: Video) => {
@@ -191,15 +380,22 @@ export default function VideoPlayer({ videos, title = "Related Videos" }: VideoP
           </div>
 
           {/* Video Thumbnail/Iframe */}
-          {currentVideoData.url.includes('youtube.com') || currentVideoData.url.includes('embed') ? (
-            <iframe
-              src={currentVideoData.url}
-              title={currentVideoData.title}
-              className="w-full h-full"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+          {!isMounted ? (
+            <div className="w-full h-full flex items-center justify-center bg-black/50">
+              <div className="text-center text-white">
+                <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-sm">Loading...</p>
+              </div>
+            </div>
+          ) : isYouTubeVideo(currentVideoData.url) && isYoutubeAPIReady ? (
+            <div ref={playerContainerRef} className="w-full h-full"></div>
+          ) : isYouTubeVideo(currentVideoData.url) ? (
+            <div className="w-full h-full flex items-center justify-center bg-black/50">
+              <div className="text-center text-white">
+                <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-sm">Loading player...</p>
+              </div>
+            </div>
           ) : (
             <>
               <img

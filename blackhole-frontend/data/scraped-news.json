@@ -1,0 +1,172 @@
+[
+  {
+    "id": "scraped_1763534617793_26szz1xta",
+    "title": "On the front line of Europe's standoff with Russia's sanction-busting shadow fleet",
+    "description": "On the front line of Europe's standoff with Russia's sanction-busting shadow fleet 6 hours ago Share Save Jessica Parker, Berlin correspondent, Bal...",
+    "url": "https://www.bbc.com/news/articles/cz91dk0l50no",
+    "source": "Bbc",
+    "category": "general",
+    "imageUrl": "https://img.youtube.com/vi/vuaXEt6_c5o/mqdefault.jpg",
+    "publishedAt": "Just now",
+    "readTime": "10 min read",
+    "scrapedAt": "2025-11-19T06:43:37.793Z",
+    "scrapedData": {
+      "url": "https://www.bbc.com/news/articles/cz91dk0l50no",
+      "timestamp": "2025-11-19T12:13:06.724547",
+      "workflow_steps": [
+        "scraping",
+        "vetting",
+        "summarization",
+        "prompt_generation",
+        "video_search"
+      ],
+      "processing_time": {
+        "scraping": 1.09,
+        "vetting": 0,
+        "summarization": 2.39,
+        "prompt_generation": 1.37,
+        "video_search": 26.22
+      },
+      "scraped_data": {
+        "title": "On the front line of Europe's standoff with Russia's sanction-busting shadow fleet",
+        "content_length": 9699,
+        "author": {},
+        "date": ""
+      },
+      "vetting_results": {
+        "authenticity_score": 86,
+        "credibility_rating": "High",
+        "is_reliable": true,
+        "reliability_status": "Reliable",
+        "authenticity_level": "HIGH",
+        "recommendation": "Credible news source",
+        "confidence": 0.85,
+        "analysis_details": {
+          "content_analysis": {
+            "overall_score": 95,
+            "method": "enhanced_rule_based",
+            "factual_phrases": 1,
+            "quotes": 31,
+            "word_count": 1575,
+            "sensational_flags": 0
+          },
+          "source_credibility": {
+            "score": 90
+          },
+          "bias_detection": {
+            "score": 90,
+            "bias_level": "OBJECTIVE",
+            "bias_indicators": {
+              "left_bias": 0,
+              "right_bias": 0,
+              "sensationalist": 0,
+              "objective": 2
+            },
+            "sentiment": "neutral"
+          }
+        },
+        "scoring_breakdown": {
+          "source_credibility": 22.5,
+          "content_analysis": 38,
+          "cross_verification": 12,
+          "bias_analysis": 13.5
+        },
+        "analyzed_at": "2025-11-19T12:13:07.810624",
+        "analysis_version": "working_v3.0"
+      },
+      "summary": {
+        "text": "On the front line of Europe's standoff with Russia's sanction-busting shadow fleet 6 hours ago Share Save Jessica Parker, Berlin correspondent, Bal...",
+        "original_length": 9699,
+        "summary_length": 150,
+        "compression_ratio": 1.5
+      },
+      "video_prompt": {
+        "prompt": "Analyze the News summary: On the front line of Europe's standoff with Russia's sanction-busting shadow fleet with a informative tone and professional style. Provide a medium analysis that includes key insights, supporting evidence, and clear conclusions.",
+        "for_video_creation": true,
+        "based_on_summary": true
+      },
+      "ai_video_generation": {
+        "success": false,
+        "error": "name 'AIVideoGenerationService' is not defined",
+        "fallback_available": true
+      },
+      "sidebar_videos": {
+        "videos": [
+          {
+            "source": "youtube",
+            "video_id": "vuaXEt6_c5o",
+            "title": "On the front line of Europe's standoff with Russia's sanction-busting shadow fleet",
+            "description": "YouTube video about On the front line of Europe's standoff with Russia's sanction-busting shadow fleet news coverage analysis",
+            "thumbnail": "https://img.youtube.com/vi/vuaXEt6_c5o/mqdefault.jpg",
+            "channel": "YouTube Channel",
+            "duration": "Unknown",
+            "views": "Unknown",
+            "published_at": "2025-11-19T12:13:33.276191",
+            "url": "https://www.youtube.com/watch?v=vuaXEt6_c5o",
+            "embed_url": "https://www.youtube.com/embed/vuaXEt6_c5o",
+            "relevance_score": 0.9,
+            "scraped": true,
+            "real_video": true
+          }
+        ],
+        "total_found": 1,
+        "ready_for_playback": true
+      },
+      "total_processing_time": 31.07,
+      "workflow_complete": true,
+      "steps_completed": 5
+    },
+    "summary": "On the front line of Europe's standoff with Russia's sanction-busting shadow fleet 6 hours ago Share Save Jessica Parker, Berlin correspondent, Bal...",
+    "insights": {
+      "authenticity_score": 86,
+      "credibility_rating": "High",
+      "is_reliable": true,
+      "reliability_status": "Reliable",
+      "authenticity_level": "HIGH",
+      "recommendation": "Credible news source",
+      "confidence": 0.85,
+      "analysis_details": {
+        "content_analysis": {
+          "overall_score": 95,
+          "method": "enhanced_rule_based",
+          "factual_phrases": 1,
+          "quotes": 31,
+          "word_count": 1575,
+          "sensational_flags": 0
+        },
+        "source_credibility": {
+          "score": 90
+        },
+        "bias_detection": {
+          "score": 90,
+          "bias_level": "OBJECTIVE",
+          "bias_indicators": {
+            "left_bias": 0,
+            "right_bias": 0,
+            "sensationalist": 0,
+            "objective": 2
+          },
+          "sentiment": "neutral"
+        }
+      },
+      "scoring_breakdown": {
+        "source_credibility": 22.5,
+        "content_analysis": 38,
+        "cross_verification": 12,
+        "bias_analysis": 13.5
+      },
+      "analyzed_at": "2025-11-19T12:13:07.810624",
+      "analysis_version": "working_v3.0"
+    },
+    "relatedVideos": [
+      {
+        "title": "On the front line of Europe's standoff with Russia's sanction-busting shadow fleet",
+        "url": "https://www.youtube.com/watch?v=vuaXEt6_c5o",
+        "thumbnail": "https://img.youtube.com/vi/vuaXEt6_c5o/mqdefault.jpg",
+        "duration": "Unknown",
+        "source": "youtube"
+      }
+    ],
+    "storedAt": "2025-11-19T06:43:38.058Z"
+  }
+]

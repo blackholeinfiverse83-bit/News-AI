@@ -34,25 +34,62 @@ const MAX_SAVED_ARTICLES = 100 // Keep last 100 articles
  */
 export function saveScrapedNews(scrapedData: any, url: string): SavedNewsItem | null {
   try {
-    if (!scrapedData || !url) return null
+    console.log('💾 saveScrapedNews called:', {
+      hasScrapedData: !!scrapedData,
+      url: url,
+      scrapedDataKeys: scrapedData ? Object.keys(scrapedData) : []
+    })
+    
+    if (!scrapedData || !url) {
+      console.warn('⚠️ saveScrapedNews: Missing required data', {
+        hasScrapedData: !!scrapedData,
+        hasUrl: !!url
+      })
+      return null
+    }
 
-    // Extract information from scraped data
-    const title = scrapedData.title || scrapedData.scraped_data?.title || 'Untitled Article'
+    // Extract information from scraped data (handle multiple response structures)
+    const title = scrapedData.title || 
+                  scrapedData.scraped_data?.title || 
+                  scrapedData.scraped_content?.title ||
+                  'Untitled Article'
+    
     const description = scrapedData.summary?.text || 
                        scrapedData.summary || 
-                       scrapedData.scraped_data?.content?.substring(0, 200) || 
+                       scrapedData.scraped_data?.content?.substring(0, 200) ||
+                       scrapedData.scraped_content?.summary ||
+                       scrapedData.scraped_content?.content?.substring(0, 200) ||
                        'No description available'
+    
     const source = extractSourceFromUrl(url)
     const category = detectCategory(title, description)
-    const author = scrapedData.scraped_data?.author || source
-    const date = scrapedData.scraped_data?.date || new Date().toISOString()
+    const author = scrapedData.scraped_data?.author || 
+                   scrapedData.scraped_content?.author || 
+                   source
+    const date = scrapedData.scraped_data?.date || 
+                 scrapedData.scraped_content?.publication_date ||
+                 scrapedData.scraped_content?.date ||
+                 new Date().toISOString()
     
     // Calculate read time based on content length
-    const contentLength = scrapedData.scraped_data?.content_length || description.length
+    const contentLength = scrapedData.scraped_data?.content_length || 
+                         scrapedData.scraped_content?.word_count ||
+                         (scrapedData.scraped_data?.content?.length || 0) ||
+                         (scrapedData.scraped_content?.content?.length || 0) ||
+                         description.length
     const readTime = Math.ceil(contentLength / 1000) + ' min read'
 
     const imageUrl = findBestImage(scrapedData, title)
     const relatedVideos = extractRelatedVideos(scrapedData)
+    
+    console.log('📝 Extracting article data:', {
+      title,
+      category,
+      hasImage: !!imageUrl,
+      imageUrl,
+      contentLength,
+      readTime
+    })
 
     // Create news item
     const newsItem: SavedNewsItem = {
@@ -90,10 +127,18 @@ export function saveScrapedNews(scrapedData: any, url: string): SavedNewsItem | 
     
     // Save to localStorage
     localStorage.setItem(STORAGE_KEY, JSON.stringify(limited))
+    console.log('💾 Article saved to localStorage:', {
+      id: newsItem.id,
+      title: newsItem.title,
+      totalArticles: limited.length,
+      storageKey: STORAGE_KEY
+    })
     
     // Dispatch custom event to notify feed of new article
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('newsArticleSaved', { detail: newsItem }))
+      const event = new CustomEvent('newsArticleSaved', { detail: newsItem })
+      window.dispatchEvent(event)
+      console.log('📢 Dispatched newsArticleSaved event')
     }
 
     // Persist to server for cross-session news feed
@@ -231,15 +276,45 @@ function formatTimeAgo(timestamp: string): string {
 }
 
 function findBestImage(scrapedData: any, title: string): string | undefined {
+  // Check multiple possible locations for images
   const candidates = [
+    // From scraped_data structure (main article data)
+    scrapedData.scraped_data?.images?.[0]?.url,
     scrapedData.scraped_data?.metadata?.image,
     scrapedData.scraped_data?.metadata?.ogImage,
     scrapedData.scraped_data?.metadata?.twitterImage,
-    scrapedData.scraped_data?.images?.[0]?.url,
+    scrapedData.scraped_data?.metadata?.og_image,
+    scrapedData.scraped_data?.metadata?.twitter_image,
+    
+    // Direct from scraped_data root (if structure is flat)
+    scrapedData.images?.[0]?.url,
+    scrapedData.metadata?.image,
+    scrapedData.metadata?.ogImage,
+    scrapedData.metadata?.twitterImage,
+    
+    // From main article structure (unified-news-workflow response)
+    scrapedData.scraped_content?.images?.[0]?.url,
+    scrapedData.scraped_content?.metadata?.image,
+    scrapedData.scraped_content?.metadata?.ogImage,
+    
+    // Video thumbnails as fallback
     scrapedData.sidebar_videos?.videos?.[0]?.thumbnail,
     scrapedData.ai_video_generation?.video_data?.thumbnail,
   ]
-  const selected = candidates.find(Boolean)
+  
+  // Filter out invalid URLs
+  const validCandidates = candidates.filter(url => {
+    if (!url || typeof url !== 'string') return false
+    // Must be a valid URL (http/https)
+    try {
+      const urlObj = new URL(url)
+      return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
+    } catch {
+      return false
+    }
+  })
+  
+  const selected = validCandidates[0]
   if (selected) return selected
 
   // Fallback: use a themed image (unsplash) based on article title/keywords
