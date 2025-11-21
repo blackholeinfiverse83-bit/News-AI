@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Play, Pause, RotateCcw, Volume2, VolumeX, Download, Share2 } from 'lucide-react'
+import { getAudioUrl } from '@/lib/api'
 
 interface TTSPlayerProps {
   audioUrl?: string | null
+  audioPath?: string | null // Sankalp audio_path
   title?: string
   duration?: number
   newsId?: string
@@ -12,12 +14,15 @@ interface TTSPlayerProps {
 }
 
 export default function TTSPlayer({ 
-  audioUrl, 
+  audioUrl,
+  audioPath, // Sankalp audio_path
   title = 'News Audio', 
   duration = 0,
   newsId,
   onPlayComplete 
 }: TTSPlayerProps) {
+  // Use audioPath if provided (Sankalp), otherwise fall back to audioUrl
+  const resolvedAudioUrl = audioPath ? getAudioUrl(audioPath) : (audioUrl || null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [audioDuration, setAudioDuration] = useState(duration)
@@ -29,12 +34,18 @@ export default function TTSPlayer({
     const audio = audioRef.current
     if (!audio) return
 
+    // Update audio source when URL changes
+    if (resolvedAudioUrl) {
+      audio.src = resolvedAudioUrl
+      audio.load()
+    }
+
     const handleTimeUpdate = () => {
       setCurrentTime(audio.currentTime)
     }
 
     const handleLoadedMetadata = () => {
-      setAudioDuration(audio.duration)
+      setAudioDuration(audio.duration || duration)
     }
 
     const handleEnded = () => {
@@ -52,7 +63,7 @@ export default function TTSPlayer({
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
       audio.removeEventListener('ended', handleEnded)
     }
-  }, [onPlayComplete])
+  }, [resolvedAudioUrl, duration, onPlayComplete])
 
   const togglePlay = () => {
     const audio = audioRef.current
@@ -148,7 +159,7 @@ export default function TTSPlayer({
   return (
     <div className="glass-effect rounded-xl p-6 border border-white/20">
       {/* Audio Element */}
-      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      <audio ref={audioRef} src={resolvedAudioUrl || undefined} preload="metadata" />
 
       {/* Header */}
       <div className="mb-4">

@@ -1,4 +1,5 @@
 const API_BASE = 'http://localhost:8000'
+const SANKALP_API_BASE = process.env.NEXT_PUBLIC_SANKALP_API_BASE || 'http://localhost:8000'
 
 export interface WorkflowResult {
   success: boolean
@@ -149,4 +150,170 @@ export async function getBackendStatus(): Promise<{
   } catch (error) {
     throw new Error('Failed to get backend status')
   }
+}
+
+// ============================================================================
+// Sankalp (Insight Node) API Integration
+// ============================================================================
+
+export interface SankalpItem {
+  id: string
+  script: string
+  tone: string
+  language: string
+  audio_path: string
+  priority_score: number
+  trend_score: number
+  title?: string
+  summary_short?: string
+  summary_medium?: string
+  category?: string
+  polarity?: string
+  timestamp?: string
+  audio_duration?: number
+  voice_used?: string
+  synthesis_status?: string
+  avatar?: string
+}
+
+export interface SankalpFeedResponse {
+  generated_at?: string
+  items: SankalpItem[]
+}
+
+export interface FeedbackSignals {
+  editor_approve?: boolean
+  user_like?: boolean
+  user_skip?: boolean
+  manual_override?: boolean
+}
+
+export interface FeedbackResponse {
+  id: string
+  reward: number
+  action: string
+  requeued: boolean
+}
+
+/**
+ * Fetch news feed from Sankalp's weekly report
+ * Note: This assumes Sankalp exposes the weekly_report.json via HTTP
+ * If not, we'll need to integrate via Noopur or file system
+ */
+export async function getSankalpFeed(): Promise<SankalpFeedResponse> {
+  try {
+    // Try to fetch from weekly_report.json endpoint
+    // If Sankalp doesn't expose this, we'll need to adjust
+    const response = await fetch(`${SANKALP_API_BASE}/exports/weekly_report.json`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      // Fallback: try sample_integration.json
+      const fallbackResponse = await fetch(`${SANKALP_API_BASE}/exports/sample_integration.json`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!fallbackResponse.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await fallbackResponse.json()
+      return { items: data.items || [] }
+    }
+
+    const data = await response.json()
+    return { items: data.items || [], generated_at: data.generated_at }
+  } catch (error) {
+    console.error('Failed to fetch Sankalp feed:', error)
+    // Return empty feed on error
+    return { items: [] }
+  }
+}
+
+/**
+ * Submit feedback to Sankalp's reinforcement learning system
+ */
+export async function submitFeedback(
+  itemId: string,
+  item: Partial<SankalpItem>,
+  signals: FeedbackSignals
+): Promise<FeedbackResponse> {
+  try {
+    const response = await fetch(`${SANKALP_API_BASE}/feedback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id: itemId,
+        item: item,
+        signals: signals,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Failed to submit feedback:', error)
+    throw new Error(error instanceof Error ? error.message : 'Unknown error occurred')
+  }
+}
+
+/**
+ * Requeue an item for reprocessing
+ */
+export async function requeueItem(itemId: string): Promise<{ id: string; requeued: boolean }> {
+  try {
+    const response = await fetch(`${SANKALP_API_BASE}/requeue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id: itemId,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Failed to requeue item:', error)
+    throw new Error(error instanceof Error ? error.message : 'Unknown error occurred')
+  }
+}
+
+/**
+ * Get audio URL from audio_path
+ */
+export function getAudioUrl(audioPath: string): string {
+  if (!audioPath) return ''
+  
+  // If it's already a full URL, return as is
+  if (audioPath.startsWith('http://') || audioPath.startsWith('https://')) {
+    return audioPath
+  }
+  
+  // Otherwise, construct URL from base and path
+  const audioBase = process.env.NEXT_PUBLIC_AUDIO_BASE_URL || SANKALP_API_BASE
+  // Normalize path (replace backslashes with forward slashes)
+  const normalizedPath = audioPath.replace(/\\/g, '/')
+  // Remove leading slash if present to avoid double slashes
+  const cleanPath = normalizedPath.startsWith('/') ? normalizedPath.slice(1) : normalizedPath
+  
+  return `${audioBase}/${cleanPath}`
 }

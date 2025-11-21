@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import BackendStatus from '@/components/BackendStatus'
-import { checkBackendHealth } from '@/lib/api'
+import { checkBackendHealth, getSankalpFeed, type SankalpItem } from '@/lib/api'
 import { getSavedNews, removeSavedNews, SavedNewsItem } from '@/lib/newsStorage'
 import { Search, Filter, TrendingUp, Clock, Globe, Newspaper, Trash2, PlayCircle, X } from 'lucide-react'
 
@@ -19,6 +19,13 @@ interface NewsItem {
   publishedAt: string
   readTime?: string
   isScraped?: boolean
+  // Sankalp integration fields
+  script?: string
+  tone?: string
+  audio_path?: string
+  priority_score?: number
+  trend_score?: number
+  audio_duration?: number
   relatedVideos?: Array<{
     title?: string
     url?: string
@@ -91,11 +98,38 @@ export default function NewsFeed() {
   }
 
   const loadNewsFeed = async () => {
-    // Load saved scraped articles from localStorage
+    // Try to load from Sankalp first
+    let sankalpItems: NewsItem[] = []
+    try {
+      console.log('📰 Loading from Sankalp...')
+      const sankalpFeed = await getSankalpFeed()
+      sankalpItems = sankalpFeed.items.map((item: SankalpItem) => ({
+        id: item.id,
+        title: item.title || item.script?.substring(0, 100) || 'Untitled',
+        description: item.script || item.summary_medium || item.summary_short || '',
+        url: item.id, // Use id as URL since it's URL-based
+        source: extractSourceFromUrl(item.id),
+        category: item.category || 'general',
+        publishedAt: item.timestamp ? formatTimeAgo(item.timestamp) : 'Recently',
+        readTime: item.audio_duration ? `${Math.ceil(item.audio_duration)}s audio` : undefined,
+        // Sankalp fields
+        script: item.script,
+        tone: item.tone,
+        audio_path: item.audio_path,
+        priority_score: item.priority_score,
+        trend_score: item.trend_score,
+        audio_duration: item.audio_duration,
+        isScraped: false // Mark as from Sankalp
+      }))
+      console.log('✅ Sankalp feed loaded:', sankalpItems.length, 'items')
+    } catch (error) {
+      console.warn('⚠️ Failed to load Sankalp feed:', error)
+    }
+
+    // Load saved scraped articles from localStorage (fallback)
     const savedArticles = getSavedNews()
-    console.log('📰 Loading news feed:', {
-      savedArticlesCount: savedArticles.length,
-      savedArticles: savedArticles.map(a => ({ title: a.title, category: a.category, hasImage: !!a.imageUrl }))
+    console.log('📰 Loading saved articles:', {
+      savedArticlesCount: savedArticles.length
     })
     const localScraped = mapSavedItemsToNews(savedArticles)
 
@@ -112,10 +146,14 @@ export default function NewsFeed() {
       console.warn('Failed to load server-saved articles:', error)
     }
 
+    // Merge: Sankalp items first (highest priority), then scraped
     const scrapedNews = mergeByUrl([...serverScraped, ...localScraped])
-    console.log('📰 Scraped news loaded:', {
+    const allNews = mergeByUrl([...sankalpItems, ...scrapedNews])
+    
+    console.log('📰 Total news loaded:', {
+      sankalpCount: sankalpItems.length,
       scrapedCount: scrapedNews.length,
-      scrapedNews: scrapedNews.map(n => ({ title: n.title, category: n.category, hasImage: !!n.imageUrl }))
+      totalCount: allNews.length
     })
 
     // Sample news items - in production, this would come from an API
@@ -254,10 +292,9 @@ export default function NewsFeed() {
       }
     ]
     
-    // Merge scraped articles (first) with sample news
-    // Scraped articles appear first, then sample news
-    const allNews = [...scrapedNews, ...sampleNews]
-    setNewsItems(allNews)
+    // If we have Sankalp items or scraped items, use them; otherwise use sample news as fallback
+    const finalNews = allNews.length > 0 ? allNews : sampleNews
+    setNewsItems(finalNews)
   }
 
   const categories = [
@@ -410,9 +447,19 @@ export default function NewsFeed() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-purple-400 font-medium">{news.source}</span>
-                    {news.isScraped && (
-                      <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-semibold rounded-full capitalize">
-                        {news.category || 'general'}
+                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-semibold rounded-full capitalize">
+                      {news.category || 'general'}
+                    </span>
+                    {/* Sankalp scores */}
+                    {news.priority_score !== undefined && (
+                      <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-semibold rounded-full" title="Priority Score">
+                        ⭐ {Math.round(news.priority_score * 100)}%
+                      </span>
+                    )}
+                    {news.trend_score !== undefined && news.trend_score > 0.5 && (
+                      <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs font-semibold rounded-full flex items-center" title="Trending">
+                        <TrendingUp className="w-3 h-3 mr-1" />
+                        {Math.round(news.trend_score * 100)}%
                       </span>
                     )}
                   </div>
@@ -439,11 +486,32 @@ export default function NewsFeed() {
                 </p>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500 flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {news.readTime}
-                  </span>
                   <div className="flex items-center space-x-3">
+                    <span className="text-xs text-gray-500 flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {news.readTime || (news.audio_duration ? `${Math.ceil(news.audio_duration)}s` : '')}
+                    </span>
+                    {news.tone && (
+                      <span className="text-xs text-gray-500 capitalize" title="Tone">
+                        🎭 {news.tone}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    {news.audio_path && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // Open audio player modal or play audio
+                          console.log('Play audio:', news.audio_path)
+                        }}
+                        className="text-sm text-green-400 hover:text-green-300 font-semibold flex items-center group/btn"
+                        title="Play Audio"
+                      >
+                        <PlayCircle className="w-4 h-4 mr-1" />
+                        Audio
+                      </button>
+                    )}
                     {news.isScraped && news.relatedVideos?.length ? (
                       <button
                         onClick={(e) => {
@@ -456,7 +524,7 @@ export default function NewsFeed() {
                         Watch Video
                         <span className="ml-1 group-hover/btn:translate-x-1 transition-transform">▶</span>
                       </button>
-                    ) : (
+                    ) : !news.audio_path && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -595,6 +663,41 @@ function getVideoEmbedUrl(url?: string) {
     return `https://www.youtube.com/embed/${youtubeMatch[1]}?autoplay=1`
   }
   return null
+}
+
+function extractSourceFromUrl(url: string): string {
+  try {
+    const urlObj = new URL(url)
+    const hostname = urlObj.hostname
+    const source = hostname
+      .replace(/^www\./, '')
+      .split('.')
+      .slice(0, -1)
+      .join(' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+    return source || 'Unknown Source'
+  } catch {
+    return 'Unknown Source'
+  }
+}
+
+function formatTimeAgo(timestamp: string): string {
+  try {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+    
+    if (seconds < 60) return 'Just now'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`
+    
+    return date.toLocaleDateString()
+  } catch {
+    return 'Recently'
+  }
 }
 
 function mapSavedItemsToNews(items: SavedNewsItem[]): NewsItem[] {

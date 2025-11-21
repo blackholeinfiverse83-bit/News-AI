@@ -2,20 +2,22 @@
 
 import { useState } from 'react'
 import { ThumbsUp, ThumbsDown, SkipForward, CheckCircle, Flag, MessageSquare } from 'lucide-react'
-import apiService from '@/services/api'
+import { submitFeedback, type SankalpItem, type FeedbackSignals } from '@/lib/api'
 
 interface FeedbackPanelProps {
   newsId: string
+  item?: Partial<SankalpItem>
   currentFeedback?: {
     likes: number
     skips: number
     flags: number
   }
-  onFeedbackSubmit?: (type: string) => void
+  onFeedbackSubmit?: (type: string, response?: any) => void
 }
 
 export default function FeedbackPanel({ 
-  newsId, 
+  newsId,
+  item,
   currentFeedback = { likes: 0, skips: 0, flags: 0 },
   onFeedbackSubmit 
 }: FeedbackPanelProps) {
@@ -30,34 +32,82 @@ export default function FeedbackPanel({
     setIsSubmitting(true)
     
     try {
-      // Submit to API
-      await apiService.submitFeedback(newsId, type, {
-        previousFeedback: feedbackGiven,
-        timestamp: new Date().toISOString()
-      })
+      // Map frontend feedback types to Sankalp signals
+      const signals: FeedbackSignals = {}
+      
+      if (type === 'approve') {
+        signals.editor_approve = true
+      } else if (type === 'like') {
+        signals.user_like = true
+      } else if (type === 'skip') {
+        signals.user_skip = true
+      } else if (type === 'flag') {
+        signals.manual_override = true
+      }
+
+      // Submit to Sankalp API
+      const response = await submitFeedback(newsId, item || {}, signals)
 
       // Update local state
       setFeedbackGiven(type)
       
-      // Show toast notification
+      // Show toast notification with reward info
       const messages: Record<string, string> = {
-        like: '👍 Thanks for the positive feedback!',
-        skip: '⏭️ Skipped - We\'ll improve future recommendations',
-        approve: '✅ Approved - This helps train our AI',
-        flag: '🚩 Flagged - Our team will review this content'
+        like: `👍 Thanks! Reward: ${response.reward > 0 ? '+' : ''}${response.reward}`,
+        skip: `⏭️ Skipped - Reward: ${response.reward}`,
+        approve: `✅ Approved! Reward: +${response.reward}`,
+        flag: `🚩 Flagged - Action: ${response.action}`
       }
       
       setToastMessage(messages[type])
       setShowToast(true)
       setTimeout(() => setShowToast(false), 3000)
 
+      // Store in localStorage for offline sync
+      try {
+        const offlineActions = JSON.parse(localStorage.getItem('offline_feedback') || '[]')
+        offlineActions.push({
+          id: newsId,
+          type,
+          signals,
+          timestamp: new Date().toISOString(),
+          response
+        })
+        localStorage.setItem('offline_feedback', JSON.stringify(offlineActions.slice(-100))) // Keep last 100
+      } catch (e) {
+        console.warn('Failed to store offline feedback:', e)
+      }
+
       // Callback
       if (onFeedbackSubmit) {
-        onFeedbackSubmit(type)
+        onFeedbackSubmit(type, response)
       }
     } catch (error) {
       console.error('Feedback submission error:', error)
-      setToastMessage('❌ Failed to submit feedback')
+      
+      // Store for offline sync if network error
+      if (error instanceof Error && error.message.includes('fetch')) {
+        try {
+          const offlineActions = JSON.parse(localStorage.getItem('offline_feedback') || '[]')
+          offlineActions.push({
+            id: newsId,
+            type,
+            signals: type === 'approve' ? { editor_approve: true } :
+                    type === 'like' ? { user_like: true } :
+                    type === 'skip' ? { user_skip: true } :
+                    { manual_override: true },
+            timestamp: new Date().toISOString(),
+            pending: true
+          })
+          localStorage.setItem('offline_feedback', JSON.stringify(offlineActions.slice(-100)))
+          setToastMessage('📴 Stored offline - will sync when online')
+        } catch (e) {
+          setToastMessage('❌ Failed to submit feedback')
+        }
+      } else {
+        setToastMessage('❌ Failed to submit feedback')
+      }
+      
       setShowToast(true)
       setTimeout(() => setShowToast(false), 3000)
     } finally {
@@ -76,20 +126,34 @@ export default function FeedbackPanel({
     setIsSubmitting(true)
     
     try {
-      await apiService.submitFeedback(newsId, 'flag', {
-        reason: flagReason,
-        timestamp: new Date().toISOString()
-      })
+      const signals: FeedbackSignals = { manual_override: true }
+      const response = await submitFeedback(newsId, item || {}, signals)
 
       setFeedbackGiven('flag')
-      setToastMessage('🚩 Content flagged - Thank you for reporting')
+      setToastMessage(`🚩 Content flagged - Action: ${response.action}`)
       setShowToast(true)
       setShowFlagForm(false)
       setFlagReason('')
       setTimeout(() => setShowToast(false), 3000)
 
+      // Store offline
+      try {
+        const offlineActions = JSON.parse(localStorage.getItem('offline_feedback') || '[]')
+        offlineActions.push({
+          id: newsId,
+          type: 'flag',
+          signals,
+          reason: flagReason,
+          timestamp: new Date().toISOString(),
+          response
+        })
+        localStorage.setItem('offline_feedback', JSON.stringify(offlineActions.slice(-100)))
+      } catch (e) {
+        console.warn('Failed to store offline flag:', e)
+      }
+
       if (onFeedbackSubmit) {
-        onFeedbackSubmit('flag')
+        onFeedbackSubmit('flag', response)
       }
     } catch (error) {
       console.error('Flag submission error:', error)
