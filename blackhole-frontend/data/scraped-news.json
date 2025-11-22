@@ -1,5 +1,515 @@
 [
   {
+    "id": "scraped_1763805780567_73btlg9wy",
+    "title": "Innovation",
+    "description": "Innovation How can you tell if your new favourite artist is a real person? As AI-generated music floods streaming platforms, questions bubble over ...",
+    "url": "https://www.bbc.com/innovation",
+    "source": "Bbc",
+    "category": "technology",
+    "imageUrl": "https://img.youtube.com/vi/nwYqQS4yXi8/mqdefault.jpg",
+    "publishedAt": "Just now",
+    "readTime": "11 min read",
+    "scrapedAt": "2025-11-22T10:03:00.567Z",
+    "scrapedData": {
+      "url": "https://www.bbc.com/innovation",
+      "timestamp": "2025-11-22T15:32:14.596276",
+      "workflow_steps": [
+        "scraping",
+        "vetting",
+        "summarization",
+        "prompt_generation",
+        "video_search"
+      ],
+      "processing_time": {
+        "scraping": 2.26,
+        "vetting": 0,
+        "summarization": 4.58,
+        "prompt_generation": 0.52,
+        "video_search": 37.35
+      },
+      "scraped_data": {
+        "title": "Innovation",
+        "content_length": 10097,
+        "author": {},
+        "date": ""
+      },
+      "vetting_results": {
+        "authenticity_score": 83.3,
+        "credibility_rating": "High",
+        "is_reliable": true,
+        "reliability_status": "Reliable",
+        "authenticity_level": "HIGH",
+        "recommendation": "Credible news source",
+        "confidence": 0.85,
+        "analysis_details": {
+          "content_analysis": {
+            "overall_score": 92,
+            "method": "enhanced_rule_based",
+            "factual_phrases": 0,
+            "quotes": 4,
+            "word_count": 1721,
+            "sensational_flags": 0
+          },
+          "source_credibility": {
+            "score": 90
+          },
+          "bias_detection": {
+            "score": 80,
+            "bias_level": "NEUTRAL",
+            "bias_indicators": {
+              "left_bias": 0,
+              "right_bias": 0,
+              "sensationalist": 0,
+              "objective": 0
+            },
+            "sentiment": "neutral"
+          }
+        },
+        "scoring_breakdown": {
+          "source_credibility": 22.5,
+          "content_analysis": 36.8,
+          "cross_verification": 12,
+          "bias_analysis": 12
+        },
+        "analyzed_at": "2025-11-22T15:32:16.852483",
+        "analysis_version": "working_v3.0"
+      },
+      "summary": {
+        "text": "Innovation How can you tell if your new favourite artist is a real person? As AI-generated music floods streaming platforms, questions bubble over ...",
+        "original_length": 10097,
+        "summary_length": 150,
+        "compression_ratio": 1.5
+      },
+      "video_prompt": {
+        "prompt": "Analyze the News summary: Innovation with a informative tone and professional style. Provide a medium analysis that includes key insights, supporting evidence, and clear conclusions.",
+        "for_video_creation": true,
+        "based_on_summary": true
+      },
+      "ai_video_generation": {
+        "success": false,
+        "error": "name 'AIVideoGenerationService' is not defined",
+        "fallback_available": true
+      },
+      "sidebar_videos": {
+        "videos": [
+          {
+            "source": "youtube",
+            "video_id": "nwYqQS4yXi8",
+            "title": "Elon makes BOLD prediction on future work life #shorts #ElonMusk #news #tech #artificialintelligence",
+            "description": "YouTube video about Innovation news coverage analysis",
+            "thumbnail": "https://img.youtube.com/vi/nwYqQS4yXi8/mqdefault.jpg",
+            "channel": "YouTube Channel",
+            "duration": "Unknown",
+            "views": "Unknown",
+            "published_at": "2025-11-22T15:32:54.010838",
+            "url": "https://www.youtube.com/watch?v=nwYqQS4yXi8",
+            "embed_url": "https://www.youtube.com/embed/nwYqQS4yXi8",
+            "relevance_score": 0.9,
+            "scraped": true,
+            "real_video": true
+          }
+        ],
+        "total_found": 1,
+        "ready_for_playback": true
+      },
+      "total_processing_time": 44.71,
+      "workflow_complete": true,
+      "steps_completed": 5
+    },
+    "summary": "Innovation How can you tell if your new favourite artist is a real person? As AI-generated music floods streaming platforms, questions bubble over ...",
+    "insights": {
+      "authenticity_score": 83.3,
+      "credibility_rating": "High",
+      "is_reliable": true,
+      "reliability_status": "Reliable",
+      "authenticity_level": "HIGH",
+      "recommendation": "Credible news source",
+      "confidence": 0.85,
+      "analysis_details": {
+        "content_analysis": {
+          "overall_score": 92,
+          "method": "enhanced_rule_based",
+          "factual_phrases": 0,
+          "quotes": 4,
+          "word_count": 1721,
+          "sensational_flags": 0
+        },
+        "source_credibility": {
+          "score": 90
+        },
+        "bias_detection": {
+          "score": 80,
+          "bias_level": "NEUTRAL",
+          "bias_indicators": {
+            "left_bias": 0,
+            "right_bias": 0,
+            "sensationalist": 0,
+            "objective": 0
+          },
+          "sentiment": "neutral"
+        }
+      },
+      "scoring_breakdown": {
+        "source_credibility": 22.5,
+        "content_analysis": 36.8,
+        "cross_verification": 12,
+        "bias_analysis": 12
+      },
+      "analyzed_at": "2025-11-22T15:32:16.852483",
+      "analysis_version": "working_v3.0"
+    },
+    "relatedVideos": [
+      {
+        "title": "Elon makes BOLD prediction on future work life #shorts #ElonMusk #news #tech #artificialintelligence",
+        "url": "https://www.youtube.com/watch?v=nwYqQS4yXi8",
+        "thumbnail": "https://img.youtube.com/vi/nwYqQS4yXi8/mqdefault.jpg",
+        "duration": "Unknown",
+        "source": "youtube"
+      }
+    ],
+    "storedAt": "2025-11-22T10:03:00.589Z"
+  },
+  {
+    "id": "scraped_1763805640761_tcv049rxw",
+    "title": "Is there a genocide of white South Africans as Trump claims?",
+    "description": "Trump ally Marjorie Taylor Greene to quit Congress after Epstein files feud A falling out with the US president erupted amid her relentless calls t...",
+    "url": "https://www.bbc.com/",
+    "source": "Bbc",
+    "category": "general",
+    "imageUrl": "https://img.youtube.com/vi/q9TgsGxM84Q/mqdefault.jpg",
+    "publishedAt": "Just now",
+    "readTime": "12 min read",
+    "scrapedAt": "2025-11-22T10:00:40.761Z",
+    "scrapedData": {
+      "url": "https://www.bbc.com/",
+      "timestamp": "2025-11-22T15:30:20.432595",
+      "workflow_steps": [
+        "scraping",
+        "vetting",
+        "summarization",
+        "prompt_generation",
+        "video_search"
+      ],
+      "processing_time": {
+        "scraping": 1.58,
+        "vetting": 0.01,
+        "summarization": 2.29,
+        "prompt_generation": 0.56,
+        "video_search": 15.87
+      },
+      "scraped_data": {
+        "title": "Is there a genocide of white South Africans as Trump claims?",
+        "content_length": 11217,
+        "author": {},
+        "date": ""
+      },
+      "vetting_results": {
+        "authenticity_score": 69.4,
+        "credibility_rating": "Medium",
+        "is_reliable": true,
+        "reliability_status": "Questionable",
+        "authenticity_level": "MEDIUM",
+        "recommendation": "Verify with additional sources",
+        "confidence": 0.6,
+        "analysis_details": {
+          "content_analysis": {
+            "overall_score": 76,
+            "method": "enhanced_rule_based",
+            "factual_phrases": 0,
+            "quotes": 2,
+            "word_count": 1867,
+            "sensational_flags": 1
+          },
+          "source_credibility": {
+            "score": 90
+          },
+          "bias_detection": {
+            "score": 30,
+            "bias_level": "SENSATIONALIST",
+            "bias_indicators": {
+              "left_bias": 0,
+              "right_bias": 0,
+              "sensationalist": 1,
+              "objective": 0
+            },
+            "sentiment": "neutral"
+          }
+        },
+        "scoring_breakdown": {
+          "source_credibility": 22.5,
+          "content_analysis": 30.4,
+          "cross_verification": 12,
+          "bias_analysis": 4.5
+        },
+        "analyzed_at": "2025-11-22T15:30:22.019409",
+        "analysis_version": "working_v3.0"
+      },
+      "summary": {
+        "text": "Trump ally Marjorie Taylor Greene to quit Congress after Epstein files feud A falling out with the US president erupted amid her relentless calls t...",
+        "original_length": 11217,
+        "summary_length": 150,
+        "compression_ratio": 1.3
+      },
+      "video_prompt": {
+        "prompt": "Analyze the News summary: Is there a genocide of white South Africans as Trump claims? with a informative tone and professional style. Provide a medium analysis that includes key insights, supporting evidence, and clear conclusions.",
+        "for_video_creation": true,
+        "based_on_summary": true
+      },
+      "ai_video_generation": {
+        "success": false,
+        "error": "name 'AIVideoGenerationService' is not defined",
+        "fallback_available": true
+      },
+      "sidebar_videos": {
+        "videos": [
+          {
+            "source": "youtube",
+            "video_id": "q9TgsGxM84Q",
+            "title": "Afrikaners push back against Trump’s false white genocide claims in South Africa • FRANCE 24",
+            "description": "YouTube video about Is there a genocide of white South Africans as Trump claims? news coverage analysis",
+            "thumbnail": "https://img.youtube.com/vi/q9TgsGxM84Q/mqdefault.jpg",
+            "channel": "YouTube Channel",
+            "duration": "Unknown",
+            "views": "Unknown",
+            "published_at": "2025-11-22T15:30:37.059900",
+            "url": "https://www.youtube.com/watch?v=q9TgsGxM84Q",
+            "embed_url": "https://www.youtube.com/embed/q9TgsGxM84Q",
+            "relevance_score": 0.9,
+            "scraped": true,
+            "real_video": true
+          }
+        ],
+        "total_found": 1,
+        "ready_for_playback": true
+      },
+      "total_processing_time": 20.31,
+      "workflow_complete": true,
+      "steps_completed": 5
+    },
+    "summary": "Trump ally Marjorie Taylor Greene to quit Congress after Epstein files feud A falling out with the US president erupted amid her relentless calls t...",
+    "insights": {
+      "authenticity_score": 69.4,
+      "credibility_rating": "Medium",
+      "is_reliable": true,
+      "reliability_status": "Questionable",
+      "authenticity_level": "MEDIUM",
+      "recommendation": "Verify with additional sources",
+      "confidence": 0.6,
+      "analysis_details": {
+        "content_analysis": {
+          "overall_score": 76,
+          "method": "enhanced_rule_based",
+          "factual_phrases": 0,
+          "quotes": 2,
+          "word_count": 1867,
+          "sensational_flags": 1
+        },
+        "source_credibility": {
+          "score": 90
+        },
+        "bias_detection": {
+          "score": 30,
+          "bias_level": "SENSATIONALIST",
+          "bias_indicators": {
+            "left_bias": 0,
+            "right_bias": 0,
+            "sensationalist": 1,
+            "objective": 0
+          },
+          "sentiment": "neutral"
+        }
+      },
+      "scoring_breakdown": {
+        "source_credibility": 22.5,
+        "content_analysis": 30.4,
+        "cross_verification": 12,
+        "bias_analysis": 4.5
+      },
+      "analyzed_at": "2025-11-22T15:30:22.019409",
+      "analysis_version": "working_v3.0"
+    },
+    "relatedVideos": [
+      {
+        "title": "Afrikaners push back against Trump’s false white genocide claims in South Africa • FRANCE 24",
+        "url": "https://www.youtube.com/watch?v=q9TgsGxM84Q",
+        "thumbnail": "https://img.youtube.com/vi/q9TgsGxM84Q/mqdefault.jpg",
+        "duration": "Unknown",
+        "source": "youtube"
+      }
+    ],
+    "storedAt": "2025-11-22T10:00:40.776Z"
+  },
+  {
+    "id": "scraped_1763797831648_cqounck6g",
+    "title": "BBC Sport",
+    "description": "The Ashes: Australia start well in pursuit of 205 to beat England Follow live text, radio commentary and in-play video clips as Australia host Engl...",
+    "url": "https://www.bbc.com/sport",
+    "source": "Bbc",
+    "category": "general",
+    "imageUrl": "https://img.youtube.com/vi/3LtpOEL-Bpk/mqdefault.jpg",
+    "publishedAt": "Just now",
+    "readTime": "1 min read",
+    "scrapedAt": "2025-11-22T07:50:31.648Z",
+    "scrapedData": {
+      "url": "https://www.bbc.com/sport",
+      "timestamp": "2025-11-22T13:19:06.017607",
+      "workflow_steps": [
+        "scraping",
+        "vetting",
+        "summarization",
+        "prompt_generation",
+        "video_search"
+      ],
+      "processing_time": {
+        "scraping": 47.07,
+        "vetting": 0,
+        "summarization": 13.17,
+        "prompt_generation": 0.43,
+        "video_search": 24.96
+      },
+      "scraped_data": {
+        "title": "BBC Sport",
+        "content_length": 222,
+        "author": {},
+        "date": ""
+      },
+      "vetting_results": {
+        "authenticity_score": 74.5,
+        "credibility_rating": "Medium",
+        "is_reliable": true,
+        "reliability_status": "Questionable",
+        "authenticity_level": "MEDIUM",
+        "recommendation": "Verify with additional sources",
+        "confidence": 0.6,
+        "analysis_details": {
+          "content_analysis": {
+            "overall_score": 70,
+            "method": "enhanced_rule_based",
+            "factual_phrases": 0,
+            "quotes": 0,
+            "word_count": 39,
+            "sensational_flags": 0
+          },
+          "source_credibility": {
+            "score": 90
+          },
+          "bias_detection": {
+            "score": 80,
+            "bias_level": "NEUTRAL",
+            "bias_indicators": {
+              "left_bias": 0,
+              "right_bias": 0,
+              "sensationalist": 0,
+              "objective": 0
+            },
+            "sentiment": "neutral"
+          }
+        },
+        "scoring_breakdown": {
+          "source_credibility": 22.5,
+          "content_analysis": 28,
+          "cross_verification": 12,
+          "bias_analysis": 12
+        },
+        "analyzed_at": "2025-11-22T13:19:53.083832",
+        "analysis_version": "working_v3.0"
+      },
+      "summary": {
+        "text": "The Ashes: Australia start well in pursuit of 205 to beat England Follow live text, radio commentary and in-play video clips as Australia host Engl...",
+        "original_length": 222,
+        "summary_length": 150,
+        "compression_ratio": 67.6
+      },
+      "video_prompt": {
+        "prompt": "Analyze the News summary: BBC Sport with a informative tone and professional style. Provide a medium analysis that includes key insights, supporting evidence, and clear conclusions.",
+        "for_video_creation": true,
+        "based_on_summary": true
+      },
+      "ai_video_generation": {
+        "success": false,
+        "error": "name 'AIVideoGenerationService' is not defined",
+        "fallback_available": true
+      },
+      "sidebar_videos": {
+        "videos": [
+          {
+            "source": "youtube",
+            "video_id": "3LtpOEL-Bpk",
+            "title": "Ashes Chaos: England Attack, Aussie Collapse \\u0026 Record Stats! | Day 1 Debrief | BBC Sport",
+            "description": "YouTube video about BBC Sport news coverage analysis",
+            "thumbnail": "https://img.youtube.com/vi/3LtpOEL-Bpk/mqdefault.jpg",
+            "channel": "YouTube Channel",
+            "duration": "Unknown",
+            "views": "Unknown",
+            "published_at": "2025-11-22T13:20:24.988200",
+            "url": "https://www.youtube.com/watch?v=3LtpOEL-Bpk",
+            "embed_url": "https://www.youtube.com/embed/3LtpOEL-Bpk",
+            "relevance_score": 0.9,
+            "scraped": true,
+            "real_video": true
+          }
+        ],
+        "total_found": 1,
+        "ready_for_playback": true
+      },
+      "total_processing_time": 85.63,
+      "workflow_complete": true,
+      "steps_completed": 5
+    },
+    "summary": "The Ashes: Australia start well in pursuit of 205 to beat England Follow live text, radio commentary and in-play video clips as Australia host Engl...",
+    "insights": {
+      "authenticity_score": 74.5,
+      "credibility_rating": "Medium",
+      "is_reliable": true,
+      "reliability_status": "Questionable",
+      "authenticity_level": "MEDIUM",
+      "recommendation": "Verify with additional sources",
+      "confidence": 0.6,
+      "analysis_details": {
+        "content_analysis": {
+          "overall_score": 70,
+          "method": "enhanced_rule_based",
+          "factual_phrases": 0,
+          "quotes": 0,
+          "word_count": 39,
+          "sensational_flags": 0
+        },
+        "source_credibility": {
+          "score": 90
+        },
+        "bias_detection": {
+          "score": 80,
+          "bias_level": "NEUTRAL",
+          "bias_indicators": {
+            "left_bias": 0,
+            "right_bias": 0,
+            "sensationalist": 0,
+            "objective": 0
+          },
+          "sentiment": "neutral"
+        }
+      },
+      "scoring_breakdown": {
+        "source_credibility": 22.5,
+        "content_analysis": 28,
+        "cross_verification": 12,
+        "bias_analysis": 12
+      },
+      "analyzed_at": "2025-11-22T13:19:53.083832",
+      "analysis_version": "working_v3.0"
+    },
+    "relatedVideos": [
+      {
+        "title": "Ashes Chaos: England Attack, Aussie Collapse \\u0026 Record Stats! | Day 1 Debrief | BBC Sport",
+        "url": "https://www.youtube.com/watch?v=3LtpOEL-Bpk",
+        "thumbnail": "https://img.youtube.com/vi/3LtpOEL-Bpk/mqdefault.jpg",
+        "duration": "Unknown",
+        "source": "youtube"
+      }
+    ],
+    "storedAt": "2025-11-22T07:50:31.835Z"
+  },
+  {
     "id": "scraped_1763707310944_7abmhwtxi",
     "title": "Zelensky ready for 'honest work' with US to end Ukraine war",
     "description": "Zelensky ready for 'honest work' with US to end Ukraine war 45 minutes ago Share Save Laura Gozzi and James Chater Share Save Russia advances in Uk...",

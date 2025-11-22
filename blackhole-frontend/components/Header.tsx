@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, Activity, Clock, Users } from 'lucide-react'
+import { Menu, X, Activity, Clock, Users, LogIn } from 'lucide-react'
 
 interface HeaderProps {
   backendStatus: 'online' | 'offline' | 'checking'
@@ -11,7 +11,28 @@ interface HeaderProps {
 
 export default function Header({ backendStatus }: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [hasToken, setHasToken] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
+
+  useEffect(() => {
+    // Mark as mounted to prevent hydration mismatch
+    setMounted(true)
+    
+    // Check if user has JWT token
+    const checkAuth = () => {
+      try {
+        const token = localStorage.getItem('jwt_token') || process.env.NEXT_PUBLIC_JWT_TOKEN
+        setHasToken(!!token)
+      } catch {
+        setHasToken(false)
+      }
+    }
+    checkAuth()
+    // Re-check on storage changes
+    window.addEventListener('storage', checkAuth)
+    return () => window.removeEventListener('storage', checkAuth)
+  }, [])
 
   const getStatusColor = () => {
     switch (backendStatus) {
@@ -78,7 +99,7 @@ export default function Header({ backendStatus }: HeaderProps) {
             ))}
           </nav>
 
-          {/* Status and Stats */}
+          {/* Status, Stats, and Login */}
           <div className="hidden lg:flex items-center space-x-6">
             {/* Backend Status */}
             <div className="flex items-center space-x-2">
@@ -101,6 +122,23 @@ export default function Header({ backendStatus }: HeaderProps) {
                 <span>Active</span>
               </div>
             </div>
+
+            {/* Login Button */}
+            <Link
+              href="/login"
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+                pathname === '/login'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                  : mounted && hasToken
+                  ? 'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white'
+                  : 'bg-gradient-to-r from-purple-500/80 to-pink-500/80 hover:from-purple-500 hover:to-pink-500 text-white'
+              }`}
+            >
+              <LogIn className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {mounted && hasToken ? 'Auth' : 'Login'}
+              </span>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -130,6 +168,24 @@ export default function Header({ backendStatus }: HeaderProps) {
                   {item.label}
                 </Link>
               ))}
+              
+              {/* Mobile Login Button */}
+              <Link
+                href="/login"
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all mt-2 ${
+                  pathname === '/login'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    : mounted && hasToken
+                    ? 'bg-white/10 text-gray-300'
+                    : 'bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white'
+                }`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="text-sm font-medium">
+                  {mounted && hasToken ? 'Authentication' : 'Login'}
+                </span>
+              </Link>
               
               {/* Mobile Status */}
               <div className="flex items-center space-x-2 pt-4 border-t border-white/10">

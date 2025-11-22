@@ -1,3 +1,5 @@
+import { createSecurityHeaders, handleAuthError } from './security'
+
 const API_BASE = 'http://localhost:8000'
 const SANKALP_API_BASE = process.env.NEXT_PUBLIC_SANKALP_API_BASE || 'http://localhost:8000'
 
@@ -57,15 +59,22 @@ export interface WorkflowResult {
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE}/health`, {
+    const url = `${API_BASE}/health`
+    const securityHeaders = await createSecurityHeaders('GET', url)
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true',
+        ...securityHeaders,
       },
     })
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError(response.status, response)
+      }
       return false
     }
 
@@ -79,16 +88,24 @@ export async function checkBackendHealth(): Promise<boolean> {
 
 export async function runUnifiedWorkflow(url: string): Promise<WorkflowResult> {
   try {
-    const response = await fetch(`${API_BASE}/api/unified-news-workflow`, {
+    const endpoint = `${API_BASE}/api/unified-news-workflow`
+    const body = JSON.stringify({ url })
+    const securityHeaders = await createSecurityHeaders('POST', endpoint, body)
+    
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'ngrok-skip-browser-warning': 'true',
+        ...securityHeaders,
       },
-      body: JSON.stringify({ url }),
+      body,
     })
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError(response.status, response)
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -111,20 +128,28 @@ export async function testIndividualTool(tool: string, payload: any): Promise<an
       'validate-video': '/api/validate-video'
     }
     
-    const endpoint = endpoints[tool]
-    if (!endpoint) {
+    const endpointPath = endpoints[tool]
+    if (!endpointPath) {
       throw new Error(`Unknown tool: ${tool}`)
     }
     
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const fullUrl = `${API_BASE}${endpointPath}`
+    const body = JSON.stringify(payload)
+    const securityHeaders = await createSecurityHeaders('POST', fullUrl, body)
+    
+    const response = await fetch(fullUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...securityHeaders,
       },
-      body: JSON.stringify(payload),
+      body,
     })
     
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError(response.status, response)
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     
@@ -142,8 +167,21 @@ export async function getBackendStatus(): Promise<{
   version: string
 }> {
   try {
-    const response = await fetch(`${API_BASE}/health`)
+    const url = `${API_BASE}/health`
+    const securityHeaders = await createSecurityHeaders('GET', url)
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...securityHeaders,
+      },
+    })
+    
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError(response.status, response)
+      }
       throw new Error('Backend not responding')
     }
     return await response.json()
@@ -204,23 +242,34 @@ export async function getSankalpFeed(): Promise<SankalpFeedResponse> {
   try {
     // Try to fetch from weekly_report.json endpoint
     // If Sankalp doesn't expose this, we'll need to adjust
-    const response = await fetch(`${SANKALP_API_BASE}/exports/weekly_report.json`, {
+    const url = `${SANKALP_API_BASE}/exports/weekly_report.json`
+    const securityHeaders = await createSecurityHeaders('GET', url)
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...securityHeaders,
       },
     })
 
     if (!response.ok) {
       // Fallback: try sample_integration.json
-      const fallbackResponse = await fetch(`${SANKALP_API_BASE}/exports/sample_integration.json`, {
+      const fallbackUrl = `${SANKALP_API_BASE}/exports/sample_integration.json`
+      const fallbackSecurityHeaders = await createSecurityHeaders('GET', fallbackUrl)
+      
+      const fallbackResponse = await fetch(fallbackUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          ...fallbackSecurityHeaders,
         },
       })
       
       if (!fallbackResponse.ok) {
+        if (fallbackResponse.status === 401 || fallbackResponse.status === 403) {
+          handleAuthError(fallbackResponse.status, fallbackResponse)
+        }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       
@@ -246,19 +295,27 @@ export async function submitFeedback(
   signals: FeedbackSignals
 ): Promise<FeedbackResponse> {
   try {
-    const response = await fetch(`${SANKALP_API_BASE}/feedback`, {
+    const endpoint = `${SANKALP_API_BASE}/feedback`
+    const body = JSON.stringify({
+      id: itemId,
+      item: item,
+      signals: signals,
+    })
+    const securityHeaders = await createSecurityHeaders('POST', endpoint, body)
+    
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...securityHeaders,
       },
-      body: JSON.stringify({
-        id: itemId,
-        item: item,
-        signals: signals,
-      }),
+      body,
     })
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError(response.status, response)
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -275,17 +332,25 @@ export async function submitFeedback(
  */
 export async function requeueItem(itemId: string): Promise<{ id: string; requeued: boolean }> {
   try {
-    const response = await fetch(`${SANKALP_API_BASE}/requeue`, {
+    const endpoint = `${SANKALP_API_BASE}/requeue`
+    const body = JSON.stringify({
+      id: itemId,
+    })
+    const securityHeaders = await createSecurityHeaders('POST', endpoint, body)
+    
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...securityHeaders,
       },
-      body: JSON.stringify({
-        id: itemId,
-      }),
+      body,
     })
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        handleAuthError(response.status, response)
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
