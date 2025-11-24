@@ -27,7 +27,7 @@ try {
   motion = framerMotion.motion
   AnimatePresence = framerMotion.AnimatePresence
 } catch (error) {
-  console.warn('Framer Motion not available, using fallback animations')
+  // Framer Motion not available, using fallback animations
   // Fallback components
   motion = {
     div: ({ children, className, style, animate, initial, transition, whileHover, whileTap, ...props }: any) => (
@@ -151,23 +151,19 @@ export default function AdvancedNewsAnalysisPage() {
     })
 
     try {
-      console.log('🚀 Starting advanced analysis for URL:', url)
       const response = await runUnifiedWorkflow(url)
-      console.log('📥 Advanced analysis response:', response)
       
       setTimeout(() => {
         if (response.success) {
-          console.log('✅ Advanced analysis successful!')
           setAnalysisResults(response.data)
         } else {
-          console.error('❌ Advanced analysis failed:', response.message)
           setError(response.message || 'Analysis failed')
         }
         setIsAnalyzing(false)
         setCurrentStep(0)
       }, 10000) // Complete after 10 seconds
     } catch (err: any) {
-      console.error('💥 Advanced analysis error:', err)
+      logger.error('Advanced analysis error:', err)
       setTimeout(() => {
         setError(err.message || 'Failed to analyze news')
         setIsAnalyzing(false)

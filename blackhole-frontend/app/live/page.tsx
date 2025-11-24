@@ -11,6 +11,7 @@ import FeedbackPanel from '@/components/FeedbackPanel'
 import { checkBackendHealth } from '@/lib/api'
 import apiService from '@/services/api'
 import { Filter, LayoutGrid } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 export default function LiveDashboard() {
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking')
@@ -49,7 +50,7 @@ export default function LiveDashboard() {
         setCategories(result.data)
       }
     } catch (error) {
-      console.error('Failed to load categories:', error)
+      logger.error('Failed to load categories:', error)
     }
   }
 
@@ -69,7 +70,7 @@ export default function LiveDashboard() {
         }
       }
     } catch (error) {
-      console.error('Failed to load news:', error)
+      logger.error('Failed to load news:', error)
     } finally {
       setIsLoading(false)
     }
@@ -80,7 +81,7 @@ export default function LiveDashboard() {
   }
 
   const handleFeedbackSubmit = (type: string) => {
-    console.log('Feedback submitted:', type)
+    logger.log('Feedback submitted:', type)
     // Optionally refresh the item or update UI
   }
 

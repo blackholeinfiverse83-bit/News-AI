@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Play, Loader2, AlertCircle, CheckCircle, Globe, Shield, FileText, Lightbulb, Video } from 'lucide-react'
 import { runUnifiedWorkflow } from '@/lib/api'
+import { logger } from '@/lib/logger'
 
 interface NewsAnalysisCardProps {
   onAnalysisStart: (url: string) => void
@@ -54,37 +55,25 @@ export default function NewsAnalysisCard({
     onAnalysisStart(url)
 
     try {
-      console.log('🚀 Starting analysis for URL:', url)
       const response = await runUnifiedWorkflow(url)
-      console.log('📥 Analysis response received:', {
-        success: response.success,
-        message: response.message,
-        hasData: !!response.data,
-        dataKeys: response.data ? Object.keys(response.data) : []
-      })
       
       if (response.success) {
-        console.log('✅ Analysis successful!')
         if (response.data) {
-          console.log('📊 Response data structure:', Object.keys(response.data))
           onAnalysisComplete(response.data)
         } else {
-          console.warn('⚠️ Success but no data received')
+          logger.warn('Success but no data received')
           setError('Analysis completed but no data was returned')
           onAnalysisComplete(null)
         }
       } else {
         const errorMessage = response.message || 'Analysis failed'
-        console.error('❌ Analysis failed:', errorMessage)
-        console.error('📋 Full error response:', response)
+        logger.error('Analysis failed:', errorMessage)
         setError(errorMessage)
         onAnalysisComplete(null)
       }
     } catch (err: any) {
-      console.error('💥 Analysis error caught:', err)
-      console.error('🔍 Error type:', typeof err)
-      console.error('📝 Error message:', err.message)
       const errorMessage = err.message || 'Failed to analyze news'
+      logger.error('Analysis error:', err)
       setError(errorMessage)
       onAnalysisComplete(null)
     }

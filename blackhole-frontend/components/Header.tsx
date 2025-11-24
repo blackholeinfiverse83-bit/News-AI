@@ -17,6 +17,7 @@ export default function Header({ backendStatus }: HeaderProps) {
 
   useEffect(() => {
     // Mark as mounted to prevent hydration mismatch
+    // Use setTimeout to ensure this runs after initial render
     setMounted(true)
     
     // Check if user has JWT token
@@ -28,10 +29,14 @@ export default function Header({ backendStatus }: HeaderProps) {
         setHasToken(false)
       }
     }
-    checkAuth()
+    // Delay auth check slightly to avoid hydration issues
+    const timer = setTimeout(checkAuth, 0)
     // Re-check on storage changes
     window.addEventListener('storage', checkAuth)
-    return () => window.removeEventListener('storage', checkAuth)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('storage', checkAuth)
+    }
   }, [])
 
   const getStatusColor = () => {
@@ -123,22 +128,32 @@ export default function Header({ backendStatus }: HeaderProps) {
               </div>
             </div>
 
-            {/* Login Button */}
-            <Link
-              href="/login"
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
-                pathname === '/login'
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                  : mounted && hasToken
-                  ? 'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white'
-                  : 'bg-gradient-to-r from-purple-500/80 to-pink-500/80 hover:from-purple-500 hover:to-pink-500 text-white'
-              }`}
-            >
-              <LogIn className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                {mounted && hasToken ? 'Auth' : 'Login'}
-              </span>
-            </Link>
+            {/* Login Button - Always render consistently to avoid hydration issues */}
+            {mounted ? (
+              <Link
+                href="/login"
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${
+                  pathname === '/login'
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                    : hasToken
+                    ? 'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white'
+                    : 'bg-gradient-to-r from-purple-500/80 to-pink-500/80 hover:from-purple-500 hover:to-pink-500 text-white'
+                }`}
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="text-sm font-medium">
+                  {hasToken ? 'Auth' : 'Login'}
+                </span>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-all bg-gradient-to-r from-purple-500/80 to-pink-500/80 hover:from-purple-500 hover:to-pink-500 text-white"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="text-sm font-medium">Login</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -169,23 +184,34 @@ export default function Header({ backendStatus }: HeaderProps) {
                 </Link>
               ))}
               
-              {/* Mobile Login Button */}
-              <Link
-                href="/login"
-                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all mt-2 ${
-                  pathname === '/login'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                    : mounted && hasToken
-                    ? 'bg-white/10 text-gray-300'
-                    : 'bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white'
-                }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <LogIn className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  {mounted && hasToken ? 'Authentication' : 'Login'}
-                </span>
-              </Link>
+              {/* Mobile Login Button - Always render consistently to avoid hydration issues */}
+              {mounted ? (
+                <Link
+                  href="/login"
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all mt-2 ${
+                    pathname === '/login'
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                      : hasToken
+                      ? 'bg-white/10 text-gray-300'
+                      : 'bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white'
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    {hasToken ? 'Authentication' : 'Login'}
+                  </span>
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-all mt-2 bg-gradient-to-r from-purple-500/80 to-pink-500/80 text-white"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="text-sm font-medium">Login</span>
+                </Link>
+              )}
               
               {/* Mobile Status */}
               <div className="flex items-center space-x-2 pt-4 border-t border-white/10">

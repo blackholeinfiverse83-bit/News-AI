@@ -9,6 +9,7 @@ import ResultsDisplay from '@/components/ResultsDisplay'
 import BackendStatus from '@/components/BackendStatus'
 import { checkBackendHealth } from '@/lib/api'
 import { saveScrapedNews, getSavedNews } from '@/lib/newsStorage'
+import { logger } from '@/lib/logger'
 
 interface AnalysisResults {
   scraped_data?: {
@@ -134,7 +135,7 @@ export default function Home() {
       
       setFeedVideos(allVideos)
     } catch (error) {
-      console.error('Error loading feed videos:', error)
+      logger.error('Error loading feed videos:', error)
     }
   }
 
@@ -148,17 +149,6 @@ export default function Home() {
   }
 
   const handleAnalysisComplete = (results: AnalysisResults) => {
-    console.log('📊 Analysis results received:', {
-      hasResults: !!results,
-      resultKeys: results ? Object.keys(results) : [],
-      summary: results?.summary ? 'Present' : 'Missing',
-      vettingResults: results?.vetting_results ? 'Present' : 'Missing',
-      scrapedData: results?.scraped_data ? 'Present' : 'Missing',
-      analyzedUrl: analyzedUrl,
-      resultsUrl: results?.url,
-      scrapedDataUrl: results?.scraped_data?.url,
-      fullResults: results
-    })
     setAnalysisResults(results)
     setIsAnalyzing(false)
     setCurrentStep(0)
@@ -170,32 +160,11 @@ export default function Home() {
                        (results as any)?.scraped_content?.url ||
                        ''
     
-    console.log('🔍 URL extraction:', {
-      analyzedUrl,
-      resultsUrl: results?.url,
-      scrapedDataUrl: results?.scraped_data?.url,
-      finalArticleUrl: articleUrl,
-      hasArticleUrl: !!articleUrl
-    })
-    
     // Save scraped news to localStorage for the feed
     if (results && articleUrl && articleUrl.trim() !== '') {
       try {
-        console.log('💾 Attempting to save article:', {
-          url: articleUrl,
-          hasResults: !!results,
-          resultsStructure: Object.keys(results)
-        })
-        
         const saved = saveScrapedNews(results, articleUrl)
         if (saved) {
-          console.log('✅ News article saved to feed:', saved.title, {
-            category: saved.category,
-            imageUrl: saved.imageUrl,
-            hasImage: !!saved.imageUrl,
-            id: saved.id,
-            url: saved.url
-          })
           // Show notification
           setShowSavedNotification(true)
           setTimeout(() => setShowSavedNotification(false), 5000)
@@ -210,32 +179,18 @@ export default function Home() {
             window.localStorage.setItem('newsFeedUpdated', Date.now().toString())
           }
         } else {
-          console.warn('⚠️ Failed to save article to feed - saveScrapedNews returned null', {
-            url: articleUrl,
-            results: results
-          })
+          logger.warn('Failed to save article to feed - saveScrapedNews returned null')
         }
       } catch (error) {
-        console.error('❌ Error saving news to feed:', error)
+        logger.error('Error saving news to feed:', error)
       }
     } else {
-      console.warn('⚠️ Cannot save article - missing data:', {
-        hasResults: !!results,
-        hasUrl: !!articleUrl,
-        articleUrlValue: articleUrl,
-        analyzedUrl: analyzedUrl,
-        resultsUrl: results?.url,
-        scrapedDataUrl: results?.scraped_data?.url
-      })
-      
       // Try to save anyway if we have results, even without URL (use a fallback)
       if (results) {
         const fallbackUrl = results?.url || `scraped-${Date.now()}`
-        console.log('🔄 Attempting save with fallback URL:', fallbackUrl)
         try {
           const saved = saveScrapedNews(results, fallbackUrl)
           if (saved) {
-            console.log('✅ Article saved with fallback URL:', saved.title)
             setShowSavedNotification(true)
             setTimeout(() => setShowSavedNotification(false), 5000)
             loadFeedVideos()
@@ -245,7 +200,7 @@ export default function Home() {
             }
           }
         } catch (error) {
-          console.error('❌ Error saving with fallback URL:', error)
+          logger.error('Error saving with fallback URL:', error)
         }
       }
     }

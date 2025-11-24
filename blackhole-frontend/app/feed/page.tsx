@@ -7,6 +7,7 @@ import BackendStatus from '@/components/BackendStatus'
 import { checkBackendHealth, getSankalpFeed, type SankalpItem } from '@/lib/api'
 import { getSavedNews, removeSavedNews, SavedNewsItem } from '@/lib/newsStorage'
 import { Search, Filter, TrendingUp, Clock, Globe, Newspaper, Trash2, PlayCircle, X } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface NewsItem {
   id: string
@@ -59,7 +60,7 @@ export default function NewsFeed() {
     
     // Listen for custom event when articles are saved in same tab
     const handleNewsSaved = (event?: CustomEvent) => {
-      console.log('📰 News article saved event received:', event?.detail)
+      logger.log('News article saved event received')
       loadNewsFeed()
     }
     window.addEventListener('newsArticleSaved', handleNewsSaved as EventListener)
@@ -67,7 +68,7 @@ export default function NewsFeed() {
     // Also listen for localStorage changes
     const handleStorageUpdate = () => {
       if (localStorage.getItem('newsFeedUpdated')) {
-        console.log('📰 Storage update detected, refreshing feed')
+        logger.log('Storage update detected, refreshing feed')
         loadNewsFeed()
         localStorage.removeItem('newsFeedUpdated')
       }
@@ -101,7 +102,7 @@ export default function NewsFeed() {
     // Try to load from Sankalp first
     let sankalpItems: NewsItem[] = []
     try {
-      console.log('📰 Loading from Sankalp...')
+      logger.log('Loading from Sankalp...')
       const sankalpFeed = await getSankalpFeed()
       sankalpItems = sankalpFeed.items.map((item: SankalpItem) => ({
         id: item.id,
@@ -121,14 +122,14 @@ export default function NewsFeed() {
         audio_duration: item.audio_duration,
         isScraped: false // Mark as from Sankalp
       }))
-      console.log('✅ Sankalp feed loaded:', sankalpItems.length, 'items')
+      logger.log('Sankalp feed loaded:', sankalpItems.length, 'items')
     } catch (error) {
-      console.warn('⚠️ Failed to load Sankalp feed:', error)
+      logger.warn('Failed to load Sankalp feed:', error)
     }
 
     // Load saved scraped articles from localStorage (fallback)
     const savedArticles = getSavedNews()
-    console.log('📰 Loading saved articles:', {
+    logger.log('Loading saved articles', {
       savedArticlesCount: savedArticles.length
     })
     const localScraped = mapSavedItemsToNews(savedArticles)
@@ -143,14 +144,14 @@ export default function NewsFeed() {
         }
       }
     } catch (error) {
-      console.warn('Failed to load server-saved articles:', error)
+      logger.warn('Failed to load server-saved articles:', error)
     }
 
     // Merge: Sankalp items first (highest priority), then scraped
     const scrapedNews = mergeByUrl([...serverScraped, ...localScraped])
     const allNews = mergeByUrl([...sankalpItems, ...scrapedNews])
     
-    console.log('📰 Total news loaded:', {
+    logger.log('Total news loaded', {
       sankalpCount: sankalpItems.length,
       scrapedCount: scrapedNews.length,
       totalCount: allNews.length
@@ -503,7 +504,7 @@ export default function NewsFeed() {
                         onClick={(e) => {
                           e.stopPropagation()
                           // Open audio player modal or play audio
-                          console.log('Play audio:', news.audio_path)
+                          logger.log('Play audio:', news.audio_path)
                         }}
                         className="text-sm text-green-400 hover:text-green-300 font-semibold flex items-center group/btn"
                         title="Play Audio"
