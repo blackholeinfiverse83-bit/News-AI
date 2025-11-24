@@ -187,16 +187,17 @@ export default function NewsAnalysisCard({
         <h3 className="text-xl font-semibold text-white mb-6">AI Analysis Pipeline</h3>
         
         {/* Desktop View - Horizontal */}
-        <div className="hidden md:flex items-center justify-between">
+        <div className="hidden md:block overflow-x-auto pb-4">
+          <div className="flex items-center gap-6 min-w-[900px]">
           {steps.map((step, index) => {
             const status = getStepStatus(step.id)
             const isLast = index === steps.length - 1
 
             return (
-              <div key={step.id} className="flex items-center flex-1">
+              <div key={step.id} className="flex items-center flex-shrink-0 min-w-[220px]">
                 {/* Step Circle */}
                 <div className={`
-                  relative flex items-center justify-center w-16 h-16 rounded-full border-2 transition-all duration-500
+                  relative flex items-center justify-center w-16 h-16 rounded-full border-2 transition-all duration-500 flex-shrink-0
                   ${getStepClasses(status)}
                 `}>
                   {getStepIcon(step, status)}
@@ -222,7 +223,7 @@ export default function NewsAnalysisCard({
 
                 {/* Connector Line */}
                 {!isLast && (
-                  <div className="flex-1 mx-6">
+                  <div className="w-16 mx-6 flex-shrink-0">
                     <div className={`h-1 transition-all duration-500 rounded ${
                       status === 'completed' ? 'bg-green-500' :
                       status === 'active' ? 'bg-gradient-to-r from-purple-500 to-pink-500' : 'bg-gray-700'
@@ -232,6 +233,7 @@ export default function NewsAnalysisCard({
               </div>
             )
           })}
+          </div>
         </div>
 
         {/* Mobile View - Vertical */}
